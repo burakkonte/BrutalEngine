@@ -1,0 +1,13 @@
+C:/Users/su-ko/Downloads/brutal_engine/brutal/out/build/x64-Debug/CMakeFiles/edit_cache.dir
+C:/Users/su-ko/Downloads/brutal_engine/brutal/out/build/x64-Debug/CMakeFiles/rebuild_cache.dir
+C:/Users/su-ko/Downloads/brutal_engine/brutal/out/build/x64-Debug/third_party/CMakeFiles/edit_cache.dir
+C:/Users/su-ko/Downloads/brutal_engine/brutal/out/build/x64-Debug/third_party/CMakeFiles/rebuild_cache.dir
+C:/Users/su-ko/Downloads/brutal_engine/brutal/out/build/x64-Debug/third_party/glad/CMakeFiles/glad.dir
+C:/Users/su-ko/Downloads/brutal_engine/brutal/out/build/x64-Debug/third_party/glad/CMakeFiles/edit_cache.dir
+C:/Users/su-ko/Downloads/brutal_engine/brutal/out/build/x64-Debug/third_party/glad/CMakeFiles/rebuild_cache.dir
+C:/Users/su-ko/Downloads/brutal_engine/brutal/out/build/x64-Debug/engine/CMakeFiles/brutal_engine.dir
+C:/Users/su-ko/Downloads/brutal_engine/brutal/out/build/x64-Debug/engine/CMakeFiles/edit_cache.dir
+C:/Users/su-ko/Downloads/brutal_engine/brutal/out/build/x64-Debug/engine/CMakeFiles/rebuild_cache.dir
+C:/Users/su-ko/Downloads/brutal_engine/brutal/out/build/x64-Debug/playground/CMakeFiles/playground.dir
+C:/Users/su-ko/Downloads/brutal_engine/brutal/out/build/x64-Debug/playground/CMakeFiles/edit_cache.dir
+C:/Users/su-ko/Downloads/brutal_engine/brutal/out/build/x64-Debug/playground/CMakeFiles/rebuild_cache.dir

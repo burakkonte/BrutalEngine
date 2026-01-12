@@ -1,0 +1,25 @@
+# ninja log v6
+82	609	7898963270203957	engine/CMakeFiles/brutal_engine.dir/private/renderer/gl_context.cpp.obj	b9a964a50ace296c
+35	690	7898963269729418	engine/CMakeFiles/brutal_engine.dir/private/core/memory.cpp.obj	c85293e53a0b676d
+26	836	7898963269649836	engine/CMakeFiles/brutal_engine.dir/private/core/logging.cpp.obj	4cc50772cd8e6fd
+14	1135	7898963269529279	third_party/glad/CMakeFiles/glad.dir/src/glad.c.obj	bdaa4aec0cc847b5
+43	1161	7898963269813762	engine/CMakeFiles/brutal_engine.dir/private/core/profiler.cpp.obj	5bd769c5817eb08
+52	1167	7898963269906974	engine/CMakeFiles/brutal_engine.dir/private/core/time.cpp.obj	aea03e91fc26eb65
+62	1180	7898963270002431	engine/CMakeFiles/brutal_engine.dir/private/core/platform_win32.cpp.obj	875544701e9cfacd
+112	1525	7898963270501788	engine/CMakeFiles/brutal_engine.dir/private/renderer/renderer.cpp.obj	9bd6f720f1113407
+93	1528	7898963270302166	engine/CMakeFiles/brutal_engine.dir/private/renderer/shader.cpp.obj	19a86ff81b25e5fc
+122	1540	7898963270606665	engine/CMakeFiles/brutal_engine.dir/private/renderer/camera.cpp.obj	be1c2de275cda37f
+154	1556	7898963270917421	engine/CMakeFiles/brutal_engine.dir/private/world/brush.cpp.obj	982beee4cde35373
+183	1568	7898963271221689	engine/CMakeFiles/brutal_engine.dir/private/world/scene.cpp.obj	9eb4537ef63670d2
+174	1583	7898963271128336	engine/CMakeFiles/brutal_engine.dir/private/world/collision.cpp.obj	b180d76e4b86d157
+165	1606	7898963271024574	engine/CMakeFiles/brutal_engine.dir/private/world/entity.cpp.obj	6c8af4b08c5e5069
+71	1611	7898963270093966	engine/CMakeFiles/brutal_engine.dir/private/math/geometry.cpp.obj	fdf922202e5822b1
+102	1628	7898963270407571	engine/CMakeFiles/brutal_engine.dir/private/renderer/mesh.cpp.obj	6dad62af1eaa6035
+143	1641	7898963270821442	engine/CMakeFiles/brutal_engine.dir/private/renderer/debug_draw.cpp.obj	499a39b2c69aba68
+132	1669	7898963270707333	engine/CMakeFiles/brutal_engine.dir/private/renderer/light.cpp.obj	33128cf9c0d8db37
+1136	1726	7898963280748694	third_party/glad/glad.lib	a1ebcce1257fc003
+690	1762	7898963276293270	engine/CMakeFiles/brutal_engine.dir/private/engine.cpp.obj	b71c7edac5241c4b
+611	1772	7898963275495207	engine/CMakeFiles/brutal_engine.dir/private/world/player.cpp.obj	92c8076c0d3a95dc
+837	1822	7898963277758966	playground/CMakeFiles/playground.dir/src/main.cpp.obj	5ae77316978e4bb0
+1773	1921	7898963287110757	engine/brutal_engine.lib	87879e2ccc969e16
+1921	2665	7898963288603837	playground/playground.exe	927e2ed04efbe92b
