@@ -54,6 +54,8 @@ struct PlatformState {
     i32 window_height;
     bool should_quit;
     bool mouse_captured;
+    using MessageHandler = bool (*)(void* hwnd, u32 msg, u64 wparam, i64 lparam);
+    MessageHandler message_handler;
     InputState input;
 };
 
@@ -63,6 +65,7 @@ void platform_poll_events(PlatformState* state);
 void platform_swap_buffers(PlatformState* state);
 void platform_set_mouse_capture(PlatformState* state, bool capture);
 void platform_set_window_title(PlatformState* state, const char* title);
+void platform_set_message_handler(PlatformState* state, PlatformState::MessageHandler handler);
 
 inline bool platform_key_down(const InputState* input, i32 key) {
     i32 k = key & 0xFF;

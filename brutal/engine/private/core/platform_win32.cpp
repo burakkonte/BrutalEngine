@@ -11,6 +11,9 @@ static PlatformState* g_platform = nullptr;
 
 static LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) {
     if (!g_platform) return DefWindowProcA(hwnd, msg, wp, lp);
+    if (g_platform->message_handler) {
+        g_platform->message_handler(hwnd, msg, (u64)wp, (i64)lp);
+    }
     
     switch (msg) {
         case WM_CLOSE:
@@ -176,6 +179,9 @@ void platform_set_mouse_capture(PlatformState* state, bool capture) {
 
 void platform_set_window_title(PlatformState* state, const char* title) {
     SetWindowTextA((HWND)state->hwnd, title);
+}
+void platform_set_message_handler(PlatformState* state, PlatformState::MessageHandler handler) {
+    state->message_handler = handler;
 }
 
 }

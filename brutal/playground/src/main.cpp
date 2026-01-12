@@ -14,6 +14,7 @@
 #include "brutal/world/scene.h"
 #include "brutal/world/player.h"
 #include "debug_system.h"
+#include "editor.h"
 #include <cstdio>
 
 using namespace brutal;
@@ -229,6 +230,9 @@ int main() {
     
     DebugSystem debug_system = {};
     debug_system_init(&debug_system);
+
+    EditorState editor = {};
+    editor_init(&editor);
     
     // Main loop
     while (!platform.should_quit) {
@@ -253,39 +257,66 @@ int main() {
                 platform.should_quit = true;
             }
         }
+
+        if (platform_key_pressed(&platform.input, KEY_F9)) {
+            editor_set_active(&editor, !editor.active, &platform, &player);
+        }
         
         debug_system_update(&debug_system, &platform.input);
         if (debug_system_consume_reload(&debug_system)) {
             LOG_INFO("Reload requested (not implemented)");
         }
         
-        // Capture mouse on click
-        if (platform.input.mouse.left.pressed && !platform.mouse_captured) {
+        // Capture mouse on click (play mode)
+        if (!editor.active && platform.input.mouse.left.pressed && !platform.mouse_captured) {
             platform_set_mouse_capture(&platform, true);
         }
         
         // Fixed timestep physics update
         accumulator += frame_dt;
         while (accumulator >= fixed_dt) {
-            if (platform.mouse_captured) {
+            if (!editor.active && platform.mouse_captured) {
                 PROFILE_SCOPE("Player Update");
                 player_update(&player, &platform.input, &scene.collision, (f32)fixed_dt);
             }
             accumulator -= fixed_dt;
         }
+
+        if (editor.active) {
+            editor_update(&editor, &scene, &platform, (f32)frame_dt);
+        }
         
         // Clear temp arena each frame
         arena_reset(&temp_arena);
+        if (editor.active && editor_scene_needs_rebuild(&editor)) {
+            scene_rebuild_world_mesh(&scene, &temp_arena);
+            if (editor.rebuild_collision) {
+                scene_rebuild_collision(&scene);
+            }
+            editor_clear_rebuild_flag(&editor);
+        }
         
         // Render
         PROFILE_SCOPE("Render");
         renderer_begin_frame(&renderer, platform.window_width, platform.window_height);
-        renderer_set_camera(&renderer, &player.camera);
+        renderer_set_camera(&renderer, editor.active ? &editor.camera : &player.camera);
         renderer_set_lights(&renderer, &scene.lights);
         
         // Draw world geometry
         if (scene.world_mesh.vao) {
             renderer_draw_mesh(&renderer, &scene.world_mesh, Mat4::identity(), Vec3(1, 1, 1));
+        }
+
+        // Draw props
+        for (u32 i = 0; i < scene.prop_count; ++i) {
+            const PropEntity& prop = scene.props[i];
+            if (!prop.active) continue;
+            Mat4 model = transform_to_matrix(&prop.transform);
+            renderer_draw_mesh(&renderer, renderer_get_cube_mesh(&renderer), model, prop.color);
+        }
+
+        if (editor.active && editor.show_grid) {
+            renderer_draw_grid(&renderer);
         }
         
         DebugFrameInfo frame_info = {};
@@ -294,8 +325,14 @@ int main() {
         frame_info.fps = (frame_dt > 0.0) ? (f32)(1.0 / frame_dt) : 0.0f;
         debug_system_draw(&debug_system, frame_info, &platform.input, &player, &renderer, &scene.collision,
             platform.window_width, platform.window_height);
+        if (editor.active) {
+            editor_draw_ui(&editor, &scene, &platform);
+        }
         if (debug_system_show_collision(&debug_system)) {
-            debug_lines_flush(&player.camera, platform.window_width, platform.window_height);
+            debug_lines_flush(editor.active ? &editor.camera : &player.camera, platform.window_width, platform.window_height);
+        }
+        else if (editor.active) {
+            debug_lines_flush(&editor.camera, platform.window_width, platform.window_height);
         }
 
         debug_text_flush(platform.window_width, platform.window_height);

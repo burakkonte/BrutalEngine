@@ -58,6 +58,14 @@ inline Mat4 mat4_rotation_y(f32 angle) {
     return r;
 }
 
+inline Mat4 mat4_rotation_z(f32 angle) {
+    Mat4 r = Mat4::identity();
+    f32 c = cosf(angle), s = sinf(angle);
+    r.m[0] = c; r.m[1] = s;
+    r.m[4] = -s; r.m[5] = c;
+    return r;
+}
+
 inline Mat4 mat4_look_at(const Vec3& eye, const Vec3& target, const Vec3& up) {
     Vec3 f = vec3_normalize(target - eye);
     Vec3 r = vec3_normalize(vec3_cross(f, up));
