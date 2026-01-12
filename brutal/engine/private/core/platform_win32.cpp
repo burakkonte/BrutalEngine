@@ -116,7 +116,13 @@ void platform_poll_events(PlatformState* state) {
            sizeof(state->input.keys.down_previous));
     
     for (int i = 0; i < 256; i++) {
-        state->input.keys.down[i] = (GetAsyncKeyState(i) & 0x8000) != 0;
+        SHORT key_state = GetAsyncKeyState(i);
+        bool is_down = (key_state & 0x8000) != 0;
+        bool was_down = state->input.keys.down_previous[i];
+        bool pressed = (key_state & 0x0001) != 0;
+        state->input.keys.down[i] = is_down;
+        state->input.keys.pressed[i] = pressed || (is_down && !was_down);
+        state->input.keys.released[i] = (!is_down && was_down);
     }
     
     state->input.mouse.left.pressed = state->input.mouse.left.released = false;

@@ -1,7 +1,6 @@
 cmake_minimum_required(VERSION 3.20)
 
-add_executable(playground src/main.cpp)
-
+add_executable(playground src/main.cpp src/debug_system.cpp)
 target_link_libraries(playground PRIVATE brutal_engine)
 
 if(WIN32)

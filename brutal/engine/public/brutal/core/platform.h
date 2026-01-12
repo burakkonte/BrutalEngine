@@ -17,6 +17,7 @@ enum KeyCode {
     KEY_CONTROL = 0x11,
     KEY_LCONTROL = 0xA2,  // Left Ctrl specifically
     KEY_RCONTROL = 0xA3,  // Right Ctrl specifically
+    KEY_GRAVE = 0xC0,
     KEY_F1 = 0x70, KEY_F2, KEY_F3, KEY_F4, KEY_F5, KEY_F6,
     KEY_F7, KEY_F8, KEY_F9, KEY_F10, KEY_F11, KEY_F12,
 };
@@ -36,8 +37,8 @@ struct MouseState {
 struct KeyState {
     bool down[256];          // Currently held this frame
     bool down_previous[256]; // Was held last frame
-    // pressed/released are derived: pressed = down && !down_previous
-};
+    bool pressed[256];       // Pressed since last poll
+    bool released[256];      // Released since last poll};
 
 struct InputState {
     KeyState keys;
@@ -63,7 +64,7 @@ void platform_set_mouse_capture(PlatformState* state, bool capture);
 void platform_set_window_title(PlatformState* state, const char* title);
 
 inline bool platform_key_down(const InputState* input, i32 key) {
-    return input->keys.down[key & 0xFF];
+    return input->keys.pressed[k];
 }
 
 inline bool platform_key_pressed(const InputState* input, i32 key) {
@@ -73,7 +74,7 @@ inline bool platform_key_pressed(const InputState* input, i32 key) {
 
 inline bool platform_key_released(const InputState* input, i32 key) {
     i32 k = key & 0xFF;
-    return !input->keys.down[k] && input->keys.down_previous[k];
+    return input->keys.released[k];
 }
 
 }

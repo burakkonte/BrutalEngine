@@ -13,6 +13,7 @@
 #include "brutal/renderer/debug_draw.h"
 #include "brutal/world/scene.h"
 #include "brutal/world/player.h"
+#include "debug_system.h"
 #include <cstdio>
 
 using namespace brutal;
@@ -162,7 +163,7 @@ static void build_gothic_house(Scene* scene) {
 
 int main() {
     LOG_INFO("Brutal Engine - Gothic House Demo");
-    LOG_INFO("Controls: WASD move, SPACE jump, CTRL crouch, SHIFT sprint, ESC quit");
+    LOG_INFO("Controls: WASD move, SPACE jump, CTRL crouch, SHIFT sprint, ESC quit, F1-F4 debug");
     
     // Initialize platform
     PlatformState platform = {};
@@ -198,6 +199,8 @@ int main() {
         LOG_ERROR("Failed to initialize debug drawing");
         return 1;
     }
+
+    profiler_init();
     
     // Create scene
     Scene scene = {};
@@ -224,7 +227,8 @@ int main() {
     f64 accumulator = 0.0;
     const f64 fixed_dt = 1.0 / 60.0;
     
-    bool show_debug = true;
+    DebugSystem debug_system = {};
+    debug_system_init(&debug_system);
     
     // Main loop
     while (!platform.should_quit) {
@@ -238,6 +242,8 @@ int main() {
         
         // Poll input
         platform_poll_events(&platform);
+
+        profiler_begin_frame();
         
         // Handle escape key
         if (platform_key_pressed(&platform.input, KEY_ESCAPE)) {
@@ -248,9 +254,9 @@ int main() {
             }
         }
         
-        // Toggle debug with F1
-        if (platform_key_pressed(&platform.input, KEY_F1)) {
-            show_debug = !show_debug;
+        debug_system_update(&debug_system, &platform.input);
+        if (debug_system_consume_reload(&debug_system)) {
+            LOG_INFO("Reload requested (not implemented)");
         }
         
         // Capture mouse on click
@@ -262,6 +268,7 @@ int main() {
         accumulator += frame_dt;
         while (accumulator >= fixed_dt) {
             if (platform.mouse_captured) {
+                PROFILE_SCOPE("Player Update");
                 player_update(&player, &platform.input, &scene.collision, (f32)fixed_dt);
             }
             accumulator -= fixed_dt;
@@ -271,6 +278,7 @@ int main() {
         arena_reset(&temp_arena);
         
         // Render
+        PROFILE_SCOPE("Render");
         renderer_begin_frame(&renderer, platform.window_width, platform.window_height);
         renderer_set_camera(&renderer, &player.camera);
         renderer_set_lights(&renderer, &scene.lights);
@@ -280,38 +288,26 @@ int main() {
             renderer_draw_mesh(&renderer, &scene.world_mesh, Mat4::identity(), Vec3(1, 1, 1));
         }
         
-        // Debug overlay
-        if (show_debug) {
-            Vec3 white(1, 1, 1);
-            Vec3 yellow(1, 1, 0);
-            Vec3 green(0, 1, 0);
-            Vec3 red(1, 0, 0);
-            
-            debug_text_printf(10, 10, white, "Brutal Engine - Gothic House Demo");
-            debug_text_printf(10, 25, white, "FPS: %.0f", 1.0 / frame_dt);
-            debug_text_printf(10, 40, white, "Grounded: %s", player.grounded ? "YES" : "NO");
-            debug_text_printf(10, 55, white, "Vel Y: %.2f", player.velocity.y);
-            debug_text_printf(10, 70, white, "Height: %.2f", player.current_height);
-            debug_text_printf(10, 85, white, "State: %s", 
-                player.move_state == MoveState::STANDING ? "Standing" :
-                player.move_state == MoveState::WALKING ? "Walking" :
-                player.move_state == MoveState::SPRINTING ? "Sprinting" : "Crouching");
-            
-            debug_text_printf(10, 110, yellow, "WASD: Move  SPACE: Jump  CTRL: Crouch  SHIFT: Sprint");
-            debug_text_printf(10, 125, yellow, "F1: Toggle Debug  ESC: Release Mouse/Quit");
-            
-            if (!platform.mouse_captured) {
-                debug_text_printf(10, 150, green, "Click to capture mouse");
-            }
-            
-            debug_text_flush(platform.window_width, platform.window_height);
+        DebugFrameInfo frame_info = {};
+        frame_info.delta_time = (f32)frame_dt;
+        frame_info.frame_ms = (f32)(frame_dt * 1000.0);
+        frame_info.fps = (frame_dt > 0.0) ? (f32)(1.0 / frame_dt) : 0.0f;
+        debug_system_draw(&debug_system, frame_info, &player, &renderer, &scene.collision,
+            platform.window_width, platform.window_height);
+        if (debug_system_show_collision(&debug_system)) {
+            debug_lines_flush(&player.camera, platform.window_width, platform.window_height);
         }
+
+        debug_text_flush(platform.window_width, platform.window_height);
+
+        profiler_end_frame();
         
         renderer_end_frame();
         platform_swap_buffers(&platform);
     }
     
     // Cleanup
+    profiler_shutdown();
     debug_draw_shutdown();
     scene_destroy(&scene);
     renderer_shutdown(&renderer);

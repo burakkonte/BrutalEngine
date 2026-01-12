@@ -278,12 +278,11 @@ void player_update(Player* p, const InputState* input, const CollisionWorld* col
         p->camera.position = p->camera.position + delta;
         
         // Update grounded state based on collision
-        bool was_grounded = p->grounded;
-        (void)was_grounded;
-        p->grounded = result.hit_floor;
+        bool grounded_hit = result.hit_floor && p->velocity.y <= 0.0f;
+        p->grounded = grounded_hit;
         
         // If we just landed, zero out vertical velocity
-        if (result.hit_floor && p->velocity.y < 0) {
+        if (grounded_hit && p->velocity.y < 0) {
             p->velocity.y = 0;
         }
         
