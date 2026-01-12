@@ -81,8 +81,7 @@
               "ViewState": "AgIAAAMAAAAAAAAAAAAAAAIAAAAAAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000680|",
               "WhenOpened": "2026-01-12T06:42:34.752Z",
-              "IsPinned": true,
-              "EditorCaption": ""
+              "IsPinned": true
             },
             {
               "$type": "Document",
@@ -92,7 +91,7 @@
               "RelativeDocumentMoniker": "brutal\\CMakeLists.txt",
               "ToolTip": "C:\\Users\\su-ko\\Downloads\\brutal_engine\\brutal\\CMakeLists.txt",
               "RelativeToolTip": "brutal\\CMakeLists.txt",
-              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAgAAAAAAAAAAAAAAA==",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAkAAAAHAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.003109|",
               "WhenOpened": "2026-01-12T07:04:49.863Z",
               "EditorCaption": ""
@@ -203,8 +202,7 @@
               "RelativeToolTip": "brutal\\playground\\CMakeLists.txt",
               "ViewState": "AgIAAAAAAAAAAAAAAAAAAAkAAAAAAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.003109|",
-              "WhenOpened": "2026-01-12T05:05:58.91Z",
-              "EditorCaption": ""
+              "WhenOpened": "2026-01-12T05:05:58.91Z"
             },
             {
               "$type": "Document",
