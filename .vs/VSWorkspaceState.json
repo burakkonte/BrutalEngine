@@ -2,10 +2,11 @@
   "ExpandedNodes": [
     "",
     "\\brutal",
-    "\\brutal\\engine\\private\\world",
-    "\\brutal\\playground",
-    "\\brutal\\playground\\src"
+    "\\brutal\\engine",
+    "\\brutal\\engine\\public",
+    "\\brutal\\engine\\public\\brutal",
+    "\\brutal\\engine\\public\\brutal\\core"
   ],
-  "SelectedNode": "\\brutal\\playground\\src\\main.cpp",
+  "SelectedNode": "\\brutal\\engine\\public\\brutal\\core\\platform.h",
   "PreviewInSolutionExplorer": false
 }

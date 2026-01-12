@@ -71,7 +71,7 @@ inline bool platform_key_down(const InputState* input, i32 key) {
 
 inline bool platform_key_pressed(const InputState* input, i32 key) {
     i32 k = key & 0xFF;
-    return input->keys.down[k] && !input->keys.down_previous[k];
+    return input->keys.pressed[k];
 }
 
 inline bool platform_key_released(const InputState* input, i32 key) {
