@@ -1,7 +1,12 @@
 {
   "ExpandedNodes": [
     "",
-    "\\brutal"
+    "\\brutal",
+    "\\brutal\\engine",
+    "\\brutal\\engine\\public",
+    "\\brutal\\engine\\public\\brutal",
+    "\\brutal\\engine\\public\\brutal\\core"
   ],
+  "SelectedNode": "\\brutal\\engine\\public\\brutal\\core\\platform.h",
   "PreviewInSolutionExplorer": false
 }

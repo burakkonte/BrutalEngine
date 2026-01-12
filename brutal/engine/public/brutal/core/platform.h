@@ -38,7 +38,8 @@ struct KeyState {
     bool down[256];          // Currently held this frame
     bool down_previous[256]; // Was held last frame
     bool pressed[256];       // Pressed since last poll
-    bool released[256];      // Released since last poll};
+    bool released[256];      // Released since last poll
+};
 
 struct InputState {
     KeyState keys;
@@ -64,6 +65,7 @@ void platform_set_mouse_capture(PlatformState* state, bool capture);
 void platform_set_window_title(PlatformState* state, const char* title);
 
 inline bool platform_key_down(const InputState* input, i32 key) {
+    i32 k = key & 0xFF;
     return input->keys.pressed[k];
 }
 
