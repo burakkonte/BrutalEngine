@@ -20,6 +20,7 @@ enum class MoveState {
 struct Player {
     Camera camera;
     Vec3 velocity;
+    Vec3 wish_dir;
     
     // Movement parameters
     f32 walk_speed;

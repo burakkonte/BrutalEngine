@@ -3,13 +3,6 @@
   "WorkspaceRootPath": "C:\\Users\\su-ko\\Downloads\\brutal_engine\\",
   "Documents": [
     {
-      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|C:\\Users\\su-ko\\Downloads\\brutal_engine\\brutal\\engine\\public\\brutal\\core\\platform.h||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}",
-      "RelativeMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|solutionrelative:brutal\\engine\\public\\brutal\\core\\platform.h||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}"
-    },
-    {
-      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.38.33130\\include\\vcruntime_new_debug.h||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}"
-    },
-    {
       "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|C:\\Users\\su-ko\\Downloads\\brutal_engine\\brutal\\playground\\src\\main.cpp||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}",
       "RelativeMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|solutionrelative:brutal\\playground\\src\\main.cpp||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}"
     },
@@ -22,12 +15,23 @@
       "RelativeMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|solutionrelative:brutal\\playground\\src\\debug_system.cpp||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}"
     },
     {
-      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|C:\\Users\\su-ko\\Downloads\\brutal_engine\\brutal\\playground\\CMakeLists.txt||{8B382828-6202-11D1-8870-0000F87579D2}",
-      "RelativeMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|solutionrelative:brutal\\playground\\CMakeLists.txt||{8B382828-6202-11D1-8870-0000F87579D2}"
+      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|C:\\Users\\su-ko\\Downloads\\brutal_engine\\brutal\\engine\\public\\brutal\\world\\player.h||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}",
+      "RelativeMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|solutionrelative:brutal\\engine\\public\\brutal\\world\\player.h||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|C:\\Users\\su-ko\\Downloads\\brutal_engine\\brutal\\engine\\public\\brutal\\core\\platform.h||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}",
+      "RelativeMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|solutionrelative:brutal\\engine\\public\\brutal\\core\\platform.h||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}"
     },
     {
       "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|C:\\Users\\su-ko\\Downloads\\brutal_engine\\brutal\\engine\\private\\world\\player.cpp||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}",
       "RelativeMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|solutionrelative:brutal\\engine\\private\\world\\player.cpp||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.38.33130\\include\\vcruntime_new_debug.h||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|C:\\Users\\su-ko\\Downloads\\brutal_engine\\brutal\\playground\\CMakeLists.txt||{8B382828-6202-11D1-8870-0000F87579D2}",
+      "RelativeMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|solutionrelative:brutal\\playground\\CMakeLists.txt||{8B382828-6202-11D1-8870-0000F87579D2}"
     },
     {
       "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|C:\\Users\\su-ko\\Downloads\\brutal_engine\\brutal\\engine\\private\\core\\platform_win32.cpp||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}",
@@ -44,11 +48,24 @@
       "DocumentGroups": [
         {
           "DockedWidth": 200,
-          "SelectedChildIndex": 5,
+          "SelectedChildIndex": 2,
           "Children": [
             {
               "$type": "Document",
-              "DocumentIndex": 1,
+              "DocumentIndex": 3,
+              "Title": "player.h",
+              "DocumentMoniker": "C:\\Users\\su-ko\\Downloads\\brutal_engine\\brutal\\engine\\public\\brutal\\world\\player.h",
+              "RelativeDocumentMoniker": "brutal\\engine\\public\\brutal\\world\\player.h",
+              "ToolTip": "C:\\Users\\su-ko\\Downloads\\brutal_engine\\brutal\\engine\\public\\brutal\\world\\player.h",
+              "RelativeToolTip": "brutal\\engine\\public\\brutal\\world\\player.h",
+              "ViewState": "AgIAAAkAAAAAAAAAAAAAABYAAAASAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000680|",
+              "WhenOpened": "2026-01-12T05:55:51.634Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 6,
               "Title": "vcruntime_new_debug.h",
               "DocumentMoniker": "C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.38.33130\\include\\vcruntime_new_debug.h",
               "RelativeDocumentMoniker": "..\\..\\..\\..\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.38.33130\\include\\vcruntime_new_debug.h",
@@ -56,48 +73,50 @@
               "RelativeToolTip": "..\\..\\..\\..\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.38.33130\\include\\vcruntime_new_debug.h",
               "ViewState": "AgIAAAAAAAAAAAAAAAAAAA4AAAASAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000680|",
-              "WhenOpened": "2026-01-12T05:11:39.463Z",
-              "EditorCaption": ""
+              "WhenOpened": "2026-01-12T05:11:39.463Z"
             },
             {
               "$type": "Document",
-              "DocumentIndex": 2,
+              "DocumentIndex": 0,
               "Title": "main.cpp",
               "DocumentMoniker": "C:\\Users\\su-ko\\Downloads\\brutal_engine\\brutal\\playground\\src\\main.cpp",
               "RelativeDocumentMoniker": "brutal\\playground\\src\\main.cpp",
               "ToolTip": "C:\\Users\\su-ko\\Downloads\\brutal_engine\\brutal\\playground\\src\\main.cpp",
               "RelativeToolTip": "brutal\\playground\\src\\main.cpp",
-              "ViewState": "AgIAAOAAAAAAAAAAAAAewDwBAAAEAAAAAAAAAA==",
+              "ViewState": "AgIAABMBAAAAAAAAAAAuwCYBAABrAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000677|",
-              "WhenOpened": "2026-01-12T05:07:18.494Z"
+              "WhenOpened": "2026-01-12T05:07:18.494Z",
+              "EditorCaption": ""
             },
             {
               "$type": "Document",
-              "DocumentIndex": 3,
+              "DocumentIndex": 1,
               "Title": "debug_system.h",
               "DocumentMoniker": "C:\\Users\\su-ko\\Downloads\\brutal_engine\\brutal\\playground\\src\\debug_system.h",
               "RelativeDocumentMoniker": "brutal\\playground\\src\\debug_system.h",
               "ToolTip": "C:\\Users\\su-ko\\Downloads\\brutal_engine\\brutal\\playground\\src\\debug_system.h",
               "RelativeToolTip": "brutal\\playground\\src\\debug_system.h",
-              "ViewState": "AgIAACEAAAAAAAAAAAAUwCkAAAAGAAAAAAAAAA==",
+              "ViewState": "AgIAABoAAAAAAAAAAAAuwCkAAAAAAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000680|",
-              "WhenOpened": "2026-01-12T05:07:03.216Z"
+              "WhenOpened": "2026-01-12T05:07:03.216Z",
+              "EditorCaption": ""
             },
             {
               "$type": "Document",
-              "DocumentIndex": 4,
+              "DocumentIndex": 2,
               "Title": "debug_system.cpp",
               "DocumentMoniker": "C:\\Users\\su-ko\\Downloads\\brutal_engine\\brutal\\playground\\src\\debug_system.cpp",
               "RelativeDocumentMoniker": "brutal\\playground\\src\\debug_system.cpp",
               "ToolTip": "C:\\Users\\su-ko\\Downloads\\brutal_engine\\brutal\\playground\\src\\debug_system.cpp",
               "RelativeToolTip": "brutal\\playground\\src\\debug_system.cpp",
-              "ViewState": "AgIAAJYAAAAAAAAAAAAUwKAAAAAAAAAAAAAAAA==",
+              "ViewState": "AgIAAJ0AAAAAAAAAAAAuwH4AAAANAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000677|",
-              "WhenOpened": "2026-01-12T05:06:40.114Z"
+              "WhenOpened": "2026-01-12T05:06:40.114Z",
+              "EditorCaption": ""
             },
             {
               "$type": "Document",
-              "DocumentIndex": 5,
+              "DocumentIndex": 7,
               "Title": "CMakeLists.txt",
               "DocumentMoniker": "C:\\Users\\su-ko\\Downloads\\brutal_engine\\brutal\\playground\\CMakeLists.txt",
               "RelativeDocumentMoniker": "brutal\\playground\\CMakeLists.txt",
@@ -109,32 +128,33 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 0,
+              "DocumentIndex": 4,
               "Title": "platform.h",
               "DocumentMoniker": "C:\\Users\\su-ko\\Downloads\\brutal_engine\\brutal\\engine\\public\\brutal\\core\\platform.h",
               "RelativeDocumentMoniker": "brutal\\engine\\public\\brutal\\core\\platform.h",
               "ToolTip": "C:\\Users\\su-ko\\Downloads\\brutal_engine\\brutal\\engine\\public\\brutal\\core\\platform.h",
               "RelativeToolTip": "brutal\\engine\\public\\brutal\\core\\platform.h",
-              "ViewState": "AgIAAC8AAAAAAAAAAAAuwEQAAAAiAAAAAAAAAA==",
+              "ViewState": "AgIAADEAAAAAAAAAAAAuwEQAAAAfAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000680|",
               "WhenOpened": "2026-01-12T05:04:24.426Z",
               "EditorCaption": ""
             },
             {
               "$type": "Document",
-              "DocumentIndex": 6,
+              "DocumentIndex": 5,
               "Title": "player.cpp",
               "DocumentMoniker": "C:\\Users\\su-ko\\Downloads\\brutal_engine\\brutal\\engine\\private\\world\\player.cpp",
               "RelativeDocumentMoniker": "brutal\\engine\\private\\world\\player.cpp",
               "ToolTip": "C:\\Users\\su-ko\\Downloads\\brutal_engine\\brutal\\engine\\private\\world\\player.cpp",
               "RelativeToolTip": "brutal\\engine\\private\\world\\player.cpp",
-              "ViewState": "AgIAABQBAAAAAAAAAAAAAB0BAAAAAAAAAAAAAA==",
+              "ViewState": "AgIAAPMAAAAAAAAAAAAuwPwAAAA2AAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000677|",
-              "WhenOpened": "2026-01-12T05:03:14.867Z"
+              "WhenOpened": "2026-01-12T05:03:14.867Z",
+              "EditorCaption": ""
             },
             {
               "$type": "Document",
-              "DocumentIndex": 7,
+              "DocumentIndex": 8,
               "Title": "platform_win32.cpp",
               "DocumentMoniker": "C:\\Users\\su-ko\\Downloads\\brutal_engine\\brutal\\engine\\private\\core\\platform_win32.cpp",
               "RelativeDocumentMoniker": "brutal\\engine\\private\\core\\platform_win32.cpp",
@@ -146,7 +166,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 8,
+              "DocumentIndex": 9,
               "Title": "CMake Overview Pages",
               "DocumentMoniker": "CMake Overview Pages",
               "ToolTip": "CMake Overview Pages",

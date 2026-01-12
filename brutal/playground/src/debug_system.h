@@ -29,6 +29,7 @@ namespace brutal {
     void debug_system_update(DebugSystem* system, const InputState* input);
     void debug_system_draw(const DebugSystem* system,
         const DebugFrameInfo& frame,
+        const InputState* input,
         const Player* player,
         const RendererState* renderer,
         const CollisionWorld* collision,

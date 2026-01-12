@@ -292,7 +292,7 @@ int main() {
         frame_info.delta_time = (f32)frame_dt;
         frame_info.frame_ms = (f32)(frame_dt * 1000.0);
         frame_info.fps = (frame_dt > 0.0) ? (f32)(1.0 / frame_dt) : 0.0f;
-        debug_system_draw(&debug_system, frame_info, &player, &renderer, &scene.collision,
+        debug_system_draw(&debug_system, frame_info, &platform.input, &player, &renderer, &scene.collision,
             platform.window_width, platform.window_height);
         if (debug_system_show_collision(&debug_system)) {
             debug_lines_flush(&player.camera, platform.window_width, platform.window_height);

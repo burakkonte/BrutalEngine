@@ -66,7 +66,7 @@ void platform_set_window_title(PlatformState* state, const char* title);
 
 inline bool platform_key_down(const InputState* input, i32 key) {
     i32 k = key & 0xFF;
-    return input->keys.pressed[k];
+    return input->keys.down[k];
 }
 
 inline bool platform_key_pressed(const InputState* input, i32 key) {

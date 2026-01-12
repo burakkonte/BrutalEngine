@@ -30,3 +30,17 @@
 41	835	7898989461510691	playground/CMakeFiles/playground.dir/src/main.cpp.obj	5ae77316978e4bb0
 802	961	7898989469122434	engine/brutal_engine.lib	87879e2ccc969e16
 962	1436	7898989470731124	playground/playground.exe	47bf3afed5916ed9
+51	645	7898991410025010	engine/CMakeFiles/brutal_engine.dir/private/engine.cpp.obj	b71c7edac5241c4b
+38	678	7898991409892724	engine/CMakeFiles/brutal_engine.dir/private/world/player.cpp.obj	92c8076c0d3a95dc
+24	691	7898991409759899	engine/CMakeFiles/brutal_engine.dir/private/core/platform_win32.cpp.obj	875544701e9cfacd
+62	710	7898991410133839	playground/CMakeFiles/playground.dir/src/main.cpp.obj	5ae77316978e4bb0
+74	730	7898991410256526	playground/CMakeFiles/playground.dir/src/debug_system.cpp.obj	5705b7111d55fcda
+692	851	7898991416434854	engine/brutal_engine.lib	87879e2ccc969e16
+851	1276	7898991418025145	playground/playground.exe	47bf3afed5916ed9
+34	642	7899006784716997	engine/CMakeFiles/brutal_engine.dir/private/engine.cpp.obj	b71c7edac5241c4b
+25	667	7899006784636196	engine/CMakeFiles/brutal_engine.dir/private/world/player.cpp.obj	92c8076c0d3a95dc
+49	688	7899006784878474	playground/CMakeFiles/playground.dir/src/debug_system.cpp.obj	5705b7111d55fcda
+41	701	7899006784794781	playground/CMakeFiles/playground.dir/src/main.cpp.obj	5ae77316978e4bb0
+15	754	7899006784533537	engine/CMakeFiles/brutal_engine.dir/private/core/platform_win32.cpp.obj	875544701e9cfacd
+754	910	7899006791933790	engine/brutal_engine.lib	87879e2ccc969e16
+910	1419	7899006793484006	playground/playground.exe	47bf3afed5916ed9

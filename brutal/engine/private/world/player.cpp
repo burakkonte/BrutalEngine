@@ -16,6 +16,38 @@ static const f32 AIR_CONTROL = 0.3f;           // Air control multiplier (0-1)
 static const f32 CROUCH_TRANSITION_SPEED = 8.0f; // Height units per second
 static const f32 COYOTE_TIME_MAX = 0.1f;       // Grace period for jumping after leaving ground
 static const f32 JUMP_BUFFER_MAX = 0.1f;       // Buffer jump input before landing
+static const f32 GROUND_ACCEL = 35.0f;         // Ground acceleration (m/s^2)
+static const f32 AIR_ACCEL = 12.0f;            // Air acceleration (m/s^2)
+static const f32 GROUND_FRICTION = 8.0f;       // Ground friction (1/s)
+
+static void apply_ground_friction(Player* p, f32 dt) {
+    f32 speed = sqrtf(p->velocity.x * p->velocity.x + p->velocity.z * p->velocity.z);
+    if (speed < 0.0001f) {
+        p->velocity.x = 0.0f;
+        p->velocity.z = 0.0f;
+        return;
+    }
+
+    f32 drop = speed * GROUND_FRICTION * dt;
+    f32 new_speed = speed - drop;
+    if (new_speed < 0.0f) new_speed = 0.0f;
+    f32 scale = new_speed / speed;
+    p->velocity.x *= scale;
+    p->velocity.z *= scale;
+}
+
+static void accelerate(Player* p, const Vec3& wish_dir, f32 wish_speed, f32 accel, f32 dt) {
+    if (wish_speed <= 0.0f) return;
+
+    f32 current_speed = vec3_dot(p->velocity, wish_dir);
+    f32 add_speed = wish_speed - current_speed;
+    if (add_speed <= 0.0f) return;
+
+    f32 accel_speed = accel * dt * wish_speed;
+    if (accel_speed > add_speed) accel_speed = add_speed;
+
+    p->velocity = p->velocity + wish_dir * accel_speed;
+}
 
 // =============================================================================
 // Player Initialization
@@ -24,6 +56,7 @@ void player_init(Player* p) {
     camera_init(&p->camera);
     p->camera.position = Vec3(0, 1.7f, 0);
     p->velocity = Vec3(0, 0, 0);
+    p->wish_dir = Vec3(0, 0, 0);
     
     // Movement speeds (meters per second)
     p->walk_speed = 4.5f;
@@ -205,21 +238,19 @@ void player_update(Player* p, const InputState* input, const CollisionWorld* col
     if (len > 0.001f) {
         move_dir = move_dir * (1.0f / len);
     }
+    p->wish_dir = move_dir;
     
     // =========================================================================
     // Horizontal Movement (with air control)
     // =========================================================================
-    Vec3 target_horizontal = move_dir * speed;
     
     if (p->grounded) {
-        // On ground: instant acceleration
-        p->velocity.x = target_horizontal.x;
-        p->velocity.z = target_horizontal.z;
+        apply_ground_friction(p, dt);
+        accelerate(p, move_dir, speed, GROUND_ACCEL, dt);
     } else {
         // In air: limited control
-        f32 control = p->air_control;
-        p->velocity.x += (target_horizontal.x - p->velocity.x) * control;
-        p->velocity.z += (target_horizontal.z - p->velocity.z) * control;
+        f32 air_accel = AIR_ACCEL * p->air_control;
+        accelerate(p, move_dir, speed, air_accel, dt);
     }
     
     // =========================================================================
