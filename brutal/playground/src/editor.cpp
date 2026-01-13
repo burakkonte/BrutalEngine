@@ -50,6 +50,7 @@ namespace brutal {
         constexpr i32 kInspectorSnapRotateValueId = 7101;
         constexpr i32 kInspectorSnapScaleId = 7110;
         constexpr i32 kInspectorSnapScaleValueId = 7111;
+        constexpr i32 kInspectorPivotModeId = 7120;
 
         struct Ray {
             Vec3 origin;
@@ -60,6 +61,8 @@ namespace brutal {
             Vec3 normal;
             f32 d;
         };
+
+        void editor_cancel_active_sessions(EditorState* editor);
 
         Ray RayFromPerspectiveNDC(const Camera& camera, f32 ndc_x, f32 ndc_y, f32 aspect) {
             f32 tan_half_fov = tanf(camera.fov * 0.5f);
@@ -83,6 +86,10 @@ namespace brutal {
         bool ray_segment_distance(const Ray& ray, const Vec3& a, const Vec3& b, f32* out_distance, f32* out_ray_t, f32* out_seg_t);
         i32 pack_entity_id(SelectionType type, u32 index) {
             return ((i32)type << 24) | (i32)index;
+        }
+
+        bool selection_item_match(const SelectionItem& item, SelectionType type, u32 index) {
+            return item.type == type && item.index == index;
         }
 
         f32 clamp_f32(f32 value, f32 min_value, f32 max_value) {
@@ -193,6 +200,37 @@ namespace brutal {
             return true;
         }
 
+        Vec4 mat4_mul_vec4(const Mat4& m, const Vec4& v) {
+            return Vec4(
+                m.m[0] * v.x + m.m[4] * v.y + m.m[8] * v.z + m.m[12] * v.w,
+                m.m[1] * v.x + m.m[5] * v.y + m.m[9] * v.z + m.m[13] * v.w,
+                m.m[2] * v.x + m.m[6] * v.y + m.m[10] * v.z + m.m[14] * v.w,
+                m.m[3] * v.x + m.m[7] * v.y + m.m[11] * v.z + m.m[15] * v.w
+            );
+        }
+
+        struct RectF {
+            f32 min_x;
+            f32 min_y;
+            f32 max_x;
+            f32 max_y;
+        };
+
+        RectF rectf_from_points(const Vec2& a, const Vec2& b) {
+            RectF r;
+            r.min_x = std::min(a.x, b.x);
+            r.max_x = std::max(a.x, b.x);
+            r.min_y = std::min(a.y, b.y);
+            r.max_y = std::max(a.y, b.y);
+            return r;
+        }
+
+        bool rectf_overlaps(const RectF& a, const RectF& b) {
+            if (a.max_x < b.min_x || a.min_x > b.max_x) return false;
+            if (a.max_y < b.min_y || a.min_y > b.max_y) return false;
+            return true;
+        }
+
         Ray build_ray_for_viewport(const Viewport& viewport, i32 mouse_x, i32 mouse_y) {
             i32 local_x = mouse_x - viewport.rect.x;
             i32 local_y = mouse_y - viewport.rect.y;
@@ -244,6 +282,131 @@ namespace brutal {
         AABB prop_aabb(const PropEntity& prop) {
             Vec3 size = prop.transform.scale;
             return aabb_from_center_size(prop.transform.position, size);
+        }
+
+        bool selection_contains(const EditorState* editor, SelectionType type, u32 index, size_t* out_index = nullptr) {
+            for (size_t i = 0; i < editor->selected_entities.size(); ++i) {
+                if (selection_item_match(editor->selected_entities[i], type, index)) {
+                    if (out_index) *out_index = i;
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        void editor_set_primary(EditorState* editor, SelectionType type, u32 index) {
+            editor->selection_type = type;
+            editor->selection_index = index;
+            editor->selectedEntityId = (type == SelectionType::None) ? kInvalidEntityId : pack_entity_id(type, index);
+        }
+
+        void editor_clear_selection(EditorState* editor) {
+            editor_cancel_active_sessions(editor);
+            editor->selected_entities.clear();
+            editor_set_primary(editor, SelectionType::None, 0);
+        }
+
+        void editor_add_selection(EditorState* editor, SelectionType type, u32 index, bool make_primary) {
+            if (!selection_contains(editor, type, index)) {
+                editor->selected_entities.push_back({ type, index, pack_entity_id(type, index) });
+            }
+            if (make_primary) {
+                editor_set_primary(editor, type, index);
+            }
+        }
+
+        void editor_remove_selection(EditorState* editor, size_t idx) {
+            if (idx >= editor->selected_entities.size()) return;
+            bool was_primary = editor->selected_entities[idx].id == editor->selectedEntityId;
+            editor->selected_entities.erase(editor->selected_entities.begin() + idx);
+            if (was_primary) {
+                if (!editor->selected_entities.empty()) {
+                    const SelectionItem& item = editor->selected_entities.front();
+                    editor_set_primary(editor, item.type, item.index);
+                }
+                else {
+                    editor_set_primary(editor, SelectionType::None, 0);
+                }
+            }
+        }
+
+        void editor_select_single(EditorState* editor, SelectionType type, u32 index) {
+            editor_cancel_active_sessions(editor);
+            editor->selected_entities.clear();
+            editor_add_selection(editor, type, index, true);
+        }
+
+        void editor_toggle_selection(EditorState* editor, SelectionType type, u32 index) {
+            size_t found = 0;
+            if (selection_contains(editor, type, index, &found)) {
+                editor_remove_selection(editor, found);
+            }
+            else {
+                editor_add_selection(editor, type, index, true);
+            }
+        }
+
+        void editor_adjust_selection_indices(EditorState* editor, SelectionType type, u32 index, i32 delta) {
+            for (auto& item : editor->selected_entities) {
+                if (item.type != type) continue;
+                if ((delta < 0 && item.index > index) || (delta > 0 && item.index >= index)) {
+                    item.index = (u32)((i32)item.index + delta);
+                    item.id = pack_entity_id(item.type, item.index);
+                }
+            }
+            if (editor->selection_type == type) {
+                if ((delta < 0 && editor->selection_index > index) || (delta > 0 && editor->selection_index >= index)) {
+                    editor->selection_index = (u32)((i32)editor->selection_index + delta);
+                    editor->selectedEntityId = pack_entity_id(editor->selection_type, editor->selection_index);
+                }
+            }
+        }
+
+        bool editor_project_point(const Mat4& view_proj, const Viewport& viewport, const Vec3& point, Vec2* out_screen) {
+            Vec4 clip = mat4_mul_vec4(view_proj, Vec4(point, 1.0f));
+            if (clip.w <= 0.0001f) return false;
+            f32 inv_w = 1.0f / clip.w;
+            f32 ndc_x = clip.x * inv_w;
+            f32 ndc_y = clip.y * inv_w;
+            f32 screen_x = (ndc_x * 0.5f + 0.5f) * (f32)viewport.rect.w + (f32)viewport.rect.x;
+            f32 screen_y = (1.0f - (ndc_y * 0.5f + 0.5f)) * (f32)viewport.rect.h + (f32)viewport.rect.y;
+            if (out_screen) *out_screen = Vec2(screen_x, screen_y);
+            return true;
+        }
+
+        bool editor_project_aabb(const Mat4& view_proj, const Viewport& viewport, const AABB& bounds, RectF* out_rect) {
+            Vec3 corners[8] = {
+                Vec3(bounds.min.x, bounds.min.y, bounds.min.z),
+                Vec3(bounds.max.x, bounds.min.y, bounds.min.z),
+                Vec3(bounds.min.x, bounds.max.y, bounds.min.z),
+                Vec3(bounds.max.x, bounds.max.y, bounds.min.z),
+                Vec3(bounds.min.x, bounds.min.y, bounds.max.z),
+                Vec3(bounds.max.x, bounds.min.y, bounds.max.z),
+                Vec3(bounds.min.x, bounds.max.y, bounds.max.z),
+                Vec3(bounds.max.x, bounds.max.y, bounds.max.z)
+            };
+            bool any = false;
+            RectF rect = { 0, 0, 0, 0 };
+            for (const Vec3& corner : corners) {
+                Vec2 screen;
+                if (!editor_project_point(view_proj, viewport, corner, &screen)) {
+                    continue;
+                }
+                if (!any) {
+                    rect.min_x = rect.max_x = screen.x;
+                    rect.min_y = rect.max_y = screen.y;
+                    any = true;
+                }
+                else {
+                    rect.min_x = std::min(rect.min_x, screen.x);
+                    rect.max_x = std::max(rect.max_x, screen.x);
+                    rect.min_y = std::min(rect.min_y, screen.y);
+                    rect.max_y = std::max(rect.max_y, screen.y);
+                }
+            }
+            if (!any) return false;
+            if (out_rect) *out_rect = rect;
+            return true;
         }
 
         bool mouse_in_rect(const InputState* input, i32 x, i32 y, i32 w, i32 h) {
@@ -423,14 +586,37 @@ namespace brutal {
             editor_set_transform_for_target(editor, scene, editor->selection_type, editor->selection_index, transform);
         }
 
+        Vec3 editor_get_selection_center(const EditorState* editor, const Scene* scene) {
+            if (editor->selected_entities.empty()) {
+                return Vec3(0.0f, 0.0f, 0.0f);
+            }
+            Vec3 sum(0.0f, 0.0f, 0.0f);
+            u32 count = 0;
+            for (const auto& item : editor->selected_entities) {
+                Transform transform;
+                if (editor_get_transform_for_target(scene, item.type, item.index, &transform)) {
+                    sum = sum + transform.position;
+                    ++count;
+                }
+            }
+            if (count == 0) return Vec3(0.0f, 0.0f, 0.0f);
+            return sum * (1.0f / (f32)count);
+        }
+
         Vec3 editor_get_selected_pivot(const EditorState* editor, const Scene* scene) {
+            if (editor->pivot_mode == EditorState::PivotMode::SelectionCenter) {
+                return editor_get_selection_center(editor, scene);
+            }
             Transform transform;
             if (!editor_get_selected_transform(editor, scene, &transform)) return Vec3(0.0f, 0.0f, 0.0f);
             return transform.position;
         }
 
         void editor_push_transform_command(EditorState* editor, const TransformCommand& command) {
-            editor->undo_stack.push_back(command);
+            EditorCommand cmd = {};
+            cmd.type = EditorCommand::Type::Transform;
+            cmd.transform = command;
+            editor->undo_stack.push_back(cmd);
             editor->redo_stack.clear();
         }
 
@@ -447,6 +633,7 @@ namespace brutal {
                 editor->gizmo_drag_type = SelectionType::None;
                 editor->gizmo_drag_index = 0;
                 editor->gizmo_drag_uniform = false;
+                editor->gizmo_drag_targets.clear();
             }
             editor_cancel_inspector_edit(editor);
         }
@@ -516,17 +703,11 @@ namespace brutal {
         }
 
         void editor_select_none(EditorState* editor) {
-            editor_cancel_active_sessions(editor);
-            editor->selection_type = SelectionType::None;
-            editor->selection_index = 0;
-            editor->selectedEntityId = kInvalidEntityId;
+            editor_clear_selection(editor);
         }
 
         void editor_select(EditorState* editor, SelectionType type, u32 index) {
-            editor_cancel_active_sessions(editor);
-            editor->selection_type = type;
-            editor->selection_index = index;
-            editor->selectedEntityId = pack_entity_id(type, index);
+            editor_select_single(editor, type, index);
         }
 
         void editor_apply_snap(EditorState* editor, Vec3* value) {
@@ -1037,31 +1218,26 @@ namespace brutal {
         }
 
         void editor_validate_selection(EditorState* editor, const Scene* scene) {
-            bool valid = true;
-            if (editor->selection_type == SelectionType::Brush) {
-                valid = editor->selection_index < scene->brush_count;
-            }
-            else if (editor->selection_type == SelectionType::Prop) {
-                valid = editor->selection_index < scene->prop_count;
-            }
-            else if (editor->selection_type == SelectionType::Light) {
-                valid = editor->selection_index < scene->lights.point_light_count;
-            }
-            else {
-                valid = editor->selection_type == SelectionType::None;
+            for (size_t i = 0; i < editor->selected_entities.size();) {
+                const SelectionItem& item = editor->selected_entities[i];
+                bool valid = editor_transform_target_valid(scene, item.type, item.index);
+                if (!valid) {
+                    editor_remove_selection(editor, i);
+                    continue;
+                }
+                ++i;
             }
 
-            if (!valid) {
-                editor_select_none(editor);
+            if (editor->selected_entities.empty()) {
+                editor_set_primary(editor, SelectionType::None, 0);
             }
-            else if (editor->selection_type == SelectionType::None) {
-                editor->selectedEntityId = kInvalidEntityId;
+            else if (!editor_transform_target_valid(scene, editor->selection_type, editor->selection_index)) {
+                const SelectionItem& item = editor->selected_entities.front();
+                editor_set_primary(editor, item.type, item.index);
             }
         }
 
-        void editor_update_selection(EditorState* editor, Scene* scene, PlatformState* platform, const Viewport& viewport) {
-            const InputState* input = &platform->input;
-            if (!input->mouse.left.pressed) return;
+        bool editor_pick_entity(const Scene* scene, const Viewport& viewport, const InputState* input, SelectionType* out_type, u32* out_index) {
 
             Ray ray = build_ray_for_viewport(viewport, input->mouse.x, input->mouse.y);
 
@@ -1098,12 +1274,259 @@ namespace brutal {
                 }
             }
 
-            if (best_type == SelectionType::None) {
-                editor_select_none(editor);
+            if (out_type) *out_type = best_type;
+            if (out_index) *out_index = best_index;
+            return best_type != SelectionType::None;
+        }
+
+        bool editor_insert_entity(EditorState* editor, Scene* scene, const EntityCommand& cmd) {
+            if (cmd.type == SelectionType::Brush) {
+                if (scene->brush_count >= scene->brush_capacity) return false;
+                u32 index = std::min(cmd.index, scene->brush_count);
+                for (u32 i = scene->brush_count; i > index; --i) {
+                    scene->brushes[i] = scene->brushes[i - 1];
+                }
+                scene->brushes[index] = cmd.brush;
+                scene->brush_count++;
+                scene->world_mesh_dirty = true;
+                editor->rebuild_world = true;
+                editor->rebuild_collision = true;
+                editor_adjust_selection_indices(editor, SelectionType::Brush, index, 1);
+                return true;
+            }
+            if (cmd.type == SelectionType::Prop) {
+                if (scene->prop_count >= scene->prop_capacity) return false;
+                u32 index = std::min(cmd.index, scene->prop_count);
+                for (u32 i = scene->prop_count; i > index; --i) {
+                    scene->props[i] = scene->props[i - 1];
+                }
+                scene->props[index] = cmd.prop;
+                scene->prop_count++;
+                editor_adjust_selection_indices(editor, SelectionType::Prop, index, 1);
+                return true;
+            }
+            if (cmd.type == SelectionType::Light) {
+                if (scene->lights.point_light_count >= MAX_POINT_LIGHTS) return false;
+                u32 index = std::min(cmd.index, scene->lights.point_light_count);
+                for (u32 i = scene->lights.point_light_count; i > index; --i) {
+                    scene->lights.point_lights[i] = scene->lights.point_lights[i - 1];
+                }
+                scene->lights.point_lights[index] = cmd.light;
+                scene->lights.point_light_count++;
+                editor_adjust_selection_indices(editor, SelectionType::Light, index, 1);
+                return true;
+            }
+            return false;
+        }
+
+        bool editor_remove_entity(EditorState* editor, Scene* scene, SelectionType type, u32 index, EntityCommand* out_cmd) {
+            size_t selected_idx = 0;
+            if (selection_contains(editor, type, index, &selected_idx)) {
+                editor_remove_selection(editor, selected_idx);
+            }
+            if (type == SelectionType::Brush) {
+                if (index >= scene->brush_count) return false;
+                if (out_cmd) {
+                    out_cmd->type = type;
+                    out_cmd->index = index;
+                    out_cmd->brush = scene->brushes[index];
+                }
+                for (u32 i = index; i + 1 < scene->brush_count; ++i) {
+                    scene->brushes[i] = scene->brushes[i + 1];
+                }
+                scene->brush_count--;
+                scene->world_mesh_dirty = true;
+                editor->rebuild_world = true;
+                editor->rebuild_collision = true;
+                editor_adjust_selection_indices(editor, SelectionType::Brush, index, -1);
+                return true;
+            }
+            if (type == SelectionType::Prop) {
+                if (index >= scene->prop_count) return false;
+                if (out_cmd) {
+                    out_cmd->type = type;
+                    out_cmd->index = index;
+                    out_cmd->prop = scene->props[index];
+                }
+                for (u32 i = index; i + 1 < scene->prop_count; ++i) {
+                    scene->props[i] = scene->props[i + 1];
+                }
+                scene->prop_count--;
+                editor_adjust_selection_indices(editor, SelectionType::Prop, index, -1);
+                return true;
+            }
+            if (type == SelectionType::Light) {
+                if (index >= scene->lights.point_light_count) return false;
+                if (out_cmd) {
+                    out_cmd->type = type;
+                    out_cmd->index = index;
+                    out_cmd->light = scene->lights.point_lights[index];
+                }
+                for (u32 i = index; i + 1 < scene->lights.point_light_count; ++i) {
+                    scene->lights.point_lights[i] = scene->lights.point_lights[i + 1];
+                }
+                scene->lights.point_light_count--;
+                editor_adjust_selection_indices(editor, SelectionType::Light, index, -1);
+                return true;
+            }
+            return false;
+        }
+
+        void editor_push_entity_command(EditorState* editor, const EntityCommand& command) {
+            EditorCommand cmd = {};
+            cmd.type = EditorCommand::Type::Entity;
+            cmd.entity = command;
+            editor->undo_stack.push_back(cmd);
+            editor->redo_stack.clear();
+        }
+
+        bool editor_apply_entity_command(EditorState* editor, Scene* scene, const EntityCommand& command, bool undo) {
+            if (undo) {
+                if (command.action == EntityCommand::Action::Create) {
+                    EntityCommand snapshot = command;
+                    return editor_remove_entity(editor, scene, command.type, command.index, &snapshot);
+                }
+                EntityCommand create_cmd = command;
+                return editor_insert_entity(editor, scene, create_cmd);
+            }
+            if (command.action == EntityCommand::Action::Create) {
+                return editor_insert_entity(editor, scene, command);
+            }
+            EntityCommand snapshot = command;
+            return editor_remove_entity(editor, scene, command.type, command.index, &snapshot);
+        }
+
+        void editor_apply_box_selection(EditorState* editor, Scene* scene, const Viewport& viewport, const RectF& rect, bool additive) {
+            f32 aspect = (f32)viewport.rect.w / (f32)viewport.rect.h;
+            Mat4 view = camera_view_matrix(&viewport.camera);
+            Mat4 proj = (viewport.type == ViewportType::Perspective)
+                ? camera_projection_matrix(&viewport.camera, aspect)
+                : mat4_ortho(-viewport.ortho_size * aspect, viewport.ortho_size * aspect,
+                    -viewport.ortho_size, viewport.ortho_size,
+                    viewport.camera.near_plane, viewport.camera.far_plane);
+            Mat4 view_proj = mat4_multiply(proj, view);
+
+            if (!additive) {
+                editor_clear_selection(editor);
+            }
+
+            bool primary_set = editor->selection_type != SelectionType::None;
+            auto try_add = [&](SelectionType type, u32 index, const AABB& bounds) {
+                RectF projected;
+                if (!editor_project_aabb(view_proj, viewport, bounds, &projected)) return;
+                if (!rectf_overlaps(projected, rect)) return;
+                editor_add_selection(editor, type, index, !primary_set);
+                primary_set = true;
+                };
+
+            for (u32 i = 0; i < scene->brush_count; ++i) {
+                try_add(SelectionType::Brush, i, brush_to_aabb(&scene->brushes[i]));
+            }
+
+            for (u32 i = 0; i < scene->prop_count; ++i) {
+                try_add(SelectionType::Prop, i, prop_aabb(scene->props[i]));
+            }
+
+            for (u32 i = 0; i < scene->lights.point_light_count; ++i) {
+                Vec3 light_size(0.2f, 0.2f, 0.2f);
+                AABB light_bounds = aabb_from_center_size(scene->lights.point_lights[i].position, light_size);
+                try_add(SelectionType::Light, i, light_bounds);
+            }
+
+            if (editor->selected_entities.empty()) {
+                editor_set_primary(editor, SelectionType::None, 0);
+            }
+        }
+
+        void editor_focus_selected(EditorState* editor, Scene* scene, Viewport* viewport) {
+            if (!viewport) return;
+            if (editor->selection_type == SelectionType::None) return;
+            Vec3 pivot = editor_get_selected_pivot(editor, scene);
+            if (viewport->type == ViewportType::Perspective) {
+                Vec3 to_pivot = pivot - editor->camera.position;
+                Vec3 forward = vec3_normalize(to_pivot);
+                if (vec3_length(forward) < 0.001f) {
+                    forward = camera_forward(&editor->camera);
+                }
+                f32 radius = 1.0f;
+                for (const auto& item : editor->selected_entities) {
+                    AABB bounds = {};
+                    if (item.type == SelectionType::Brush) {
+                        bounds = brush_to_aabb(&scene->brushes[item.index]);
+                    }
+                    else if (item.type == SelectionType::Prop) {
+                        bounds = prop_aabb(scene->props[item.index]);
+                    }
+                    else if (item.type == SelectionType::Light) {
+                        Vec3 light_size(0.2f, 0.2f, 0.2f);
+                        bounds = aabb_from_center_size(scene->lights.point_lights[item.index].position, light_size);
+                    }
+                    Vec3 half = aabb_half_size(bounds);
+                    radius = std::max(radius, vec3_length(half));
+                }
+                f32 distance = std::max(radius * 2.5f, 1.0f);
+                editor->camera.position = pivot - forward * distance;
+                Vec3 dir = vec3_normalize(pivot - editor->camera.position);
+                editor->camera.pitch = asinf(clamp_f32(dir.y, -0.999f, 0.999f));
+                editor->camera.yaw = atan2f(dir.x, -dir.z);
+                viewport->camera = editor->camera;
             }
             else {
-                editor_select(editor, best_type, best_index);
+                Camera* ortho_camera = nullptr;
+                if (viewport->type == ViewportType::OrthoTop) ortho_camera = &editor->ortho_top_camera;
+                if (viewport->type == ViewportType::OrthoFront) ortho_camera = &editor->ortho_front_camera;
+                if (viewport->type == ViewportType::OrthoLeft) ortho_camera = &editor->ortho_left_camera;
+                if (!ortho_camera) return;
+                Vec3 right = camera_right(ortho_camera);
+                Vec3 up = vec3_cross(right, camera_forward(ortho_camera));
+                Vec3 to_pivot = pivot - ortho_camera->position;
+                ortho_camera->position = ortho_camera->position + right * vec3_dot(to_pivot, right) + up * vec3_dot(to_pivot, up);
+                viewport->camera = *ortho_camera;
             }
+        }
+
+        bool editor_duplicate_selected(EditorState* editor, Scene* scene) {
+            if (editor->selection_type == SelectionType::None) return false;
+            EntityCommand cmd = {};
+            cmd.action = EntityCommand::Action::Create;
+            cmd.type = editor->selection_type;
+            if (cmd.type == SelectionType::Brush) {
+                if (editor->selection_index >= scene->brush_count) return false;
+                cmd.brush = scene->brushes[editor->selection_index];
+                cmd.brush.min.x += 0.25f;
+                cmd.brush.max.x += 0.25f;
+                cmd.index = scene->brush_count;
+            }
+            else if (cmd.type == SelectionType::Prop) {
+                if (editor->selection_index >= scene->prop_count) return false;
+                cmd.prop = scene->props[editor->selection_index];
+                cmd.prop.transform.position.x += 0.25f;
+                cmd.index = scene->prop_count;
+            }
+            else if (cmd.type == SelectionType::Light) {
+                if (editor->selection_index >= scene->lights.point_light_count) return false;
+                cmd.light = scene->lights.point_lights[editor->selection_index];
+                cmd.light.position.x += 0.25f;
+                cmd.index = scene->lights.point_light_count;
+            }
+            if (!editor_insert_entity(editor, scene, cmd)) return false;
+            editor_select_single(editor, cmd.type, cmd.index);
+            editor_push_entity_command(editor, cmd);
+            return true;
+        }
+
+        bool editor_delete_selected(EditorState* editor, Scene* scene) {
+            if (editor->selection_type == SelectionType::None) return false;
+            EntityCommand cmd = {};
+            cmd.action = EntityCommand::Action::Delete;
+            if (!editor_remove_entity(editor, scene, editor->selection_type, editor->selection_index, &cmd)) {
+                return false;
+            }
+            editor_push_entity_command(editor, cmd);
+            if (editor->selected_entities.empty()) {
+                editor_set_primary(editor, SelectionType::None, 0);
+            }
+            return true;
         }
 
         EditorState::GizmoAxis editor_gizmo_pick_axis_translate(const EditorState* editor, const Viewport& viewport, const InputState* input, const Vec3& pivot, f32 scale, const Transform& transform) {
@@ -1197,7 +1620,7 @@ namespace brutal {
                 if (editor->gizmo_drag_active) editor_finalize_gizmo_drag(editor, scene, false);
                 return false;
             }
-            Vec3 pivot = transform.position;
+            Vec3 pivot = editor_get_selected_pivot(editor, scene);
 
             f32 scale = editor_gizmo_scale(viewport, pivot);
             bool ui_capture = mouse_over_ui(platform);
@@ -1230,9 +1653,19 @@ namespace brutal {
                         axis_delta = roundf(axis_delta / editor->snap_value) * editor->snap_value;
                     }
                     Vec3 new_pos = editor->gizmo_drag_start_pos + editor->gizmo_drag_axis * axis_delta;
-                    Transform updated = editor->gizmo_drag_start_transform;
-                    updated.position = new_pos;
-                    editor_set_selected_transform(editor, scene, updated);
+                    if (editor->pivot_mode == EditorState::PivotMode::SelectionCenter && !editor->gizmo_drag_targets.empty()) {
+                        Vec3 offset = editor->gizmo_drag_axis * axis_delta;
+                        for (const auto& target : editor->gizmo_drag_targets) {
+                            Transform updated = target.start;
+                            updated.position = target.start.position + offset;
+                            editor_set_transform_for_target(editor, scene, target.type, target.index, updated);
+                        }
+                    }
+                    else {
+                        Transform updated = editor->gizmo_drag_start_transform;
+                        updated.position = new_pos;
+                        editor_set_selected_transform(editor, scene, updated);
+                    }
                     return true;
                 }
 
@@ -1306,6 +1739,17 @@ namespace brutal {
                 editor->gizmo_drag_type = editor->selection_type;
                 editor->gizmo_drag_index = editor->selection_index;
                 editor->gizmo_drag_uniform = (editor->gizmo_axis_hot == EditorState::GizmoAxis::Center);
+                editor->gizmo_drag_targets.clear();
+                if (editor->gizmo_mode == EditorState::GizmoMode::Translate &&
+                    editor->pivot_mode == EditorState::PivotMode::SelectionCenter &&
+                    editor->selected_entities.size() > 1) {
+                    for (const auto& item : editor->selected_entities) {
+                        Transform start;
+                        if (editor_get_transform_for_target(scene, item.type, item.index, &start)) {
+                            editor->gizmo_drag_targets.push_back({ item.type, item.index, start });
+                        }
+                    }
+                }
 
                 Ray start_ray = build_ray_for_viewport(viewport, input->mouse.x, input->mouse.y);
                 Vec3 view_dir = start_ray.dir;
@@ -1394,7 +1838,7 @@ namespace brutal {
             Transform transform;
             if (!editor_get_selected_transform(editor, scene, &transform)) return;
 
-            Vec3 pivot = transform.position;
+            Vec3 pivot = editor_get_selected_pivot(editor, scene);
 
             f32 scale = editor_gizmo_scale(viewport, pivot);
 
@@ -1436,18 +1880,27 @@ namespace brutal {
         }
 
         void editor_draw_selection_bounds_internal(const EditorState* editor, const Scene* scene) {
-            if (editor->selection_type == SelectionType::Brush) {
-                const Brush& brush = scene->brushes[editor->selection_index];
-                AABB brush_aabb = brush_to_aabb(&brush);
-                debug_wire_box(aabb_center(brush_aabb), aabb_half_size(brush_aabb) * 2.0f, Vec3(1, 0.8f, 0.2f));
-            }
-            else if (editor->selection_type == SelectionType::Prop) {
-                const PropEntity& prop = scene->props[editor->selection_index];
-                debug_wire_box(prop.transform.position, prop.transform.scale, Vec3(0.3f, 1.0f, 0.5f));
-            }
-            else if (editor->selection_type == SelectionType::Light) {
-                const PointLight& light = scene->lights.point_lights[editor->selection_index];
-                debug_wire_box(light.position, Vec3(0.2f, 0.2f, 0.2f), Vec3(1.0f, 0.9f, 0.4f));
+            for (const auto& item : editor->selected_entities) {
+                bool primary = item.id == editor->selectedEntityId;
+                Vec3 brush_color = primary ? Vec3(1, 0.8f, 0.2f) : Vec3(0.9f, 0.65f, 0.25f);
+                Vec3 prop_color = primary ? Vec3(0.3f, 1.0f, 0.5f) : Vec3(0.25f, 0.8f, 0.5f);
+                Vec3 light_color = primary ? Vec3(1.0f, 0.9f, 0.4f) : Vec3(0.8f, 0.7f, 0.3f);
+                if (item.type == SelectionType::Brush) {
+                    if (item.index >= scene->brush_count) continue;
+                    const Brush& brush = scene->brushes[item.index];
+                    AABB brush_aabb = brush_to_aabb(&brush);
+                    debug_wire_box(aabb_center(brush_aabb), aabb_half_size(brush_aabb) * 2.0f, brush_color);
+                }
+                else if (item.type == SelectionType::Prop) {
+                    if (item.index >= scene->prop_count) continue;
+                    const PropEntity& prop = scene->props[item.index];
+                    debug_wire_box(prop.transform.position, prop.transform.scale, prop_color);
+                }
+                else if (item.type == SelectionType::Light) {
+                    if (item.index >= scene->lights.point_light_count) continue;
+                    const PointLight& light = scene->lights.point_lights[item.index];
+                    debug_wire_box(light.position, Vec3(0.2f, 0.2f, 0.2f), light_color);
+                }
             }
         }
 
@@ -1492,22 +1945,28 @@ namespace brutal {
             debug_text_printf(x, y, Vec3(0.9f, 0.8f, 0.6f), "Hierarchy");
             y += kLineHeight;
 
+            debug_text_printf(x, y, Vec3(0.8f, 0.85f, 0.9f), "Brushes (%u)", scene->brush_count);
+            y += kLineHeight;
+
             for (u32 i = 0; i < scene->brush_count; ++i) {
                 char label[64];
-                snprintf(label, sizeof(label), "Brush %u", i);
+                snprintf(label, sizeof(label), "  Brush %u", i);
                 bool clicked = ui_button(editor, input, 1000 + (i32)i, x, y, kHierarchyWidth, label);
                 if (clicked) {
-                    editor_select(editor, SelectionType::Brush, i);
+                    editor_select_single(editor, SelectionType::Brush, i);
                 }
                 y += kLineHeight;
             }
 
+            debug_text_printf(x, y, Vec3(0.8f, 0.85f, 0.9f), "Props (%u)", scene->prop_count);
+            y += kLineHeight;
+
             for (u32 i = 0; i < scene->prop_count; ++i) {
                 char label[64];
-                snprintf(label, sizeof(label), "Prop %u", i);
+                snprintf(label, sizeof(label), "  Prop %u", i);
                 bool clicked = ui_button(editor, input, 2000 + (i32)i, x, y, kHierarchyWidth, label);
                 if (clicked) {
-                    editor_select(editor, SelectionType::Prop, i);
+                    editor_select_single(editor, SelectionType::Light, i);
                 }
                 y += kLineHeight;
             }
@@ -1542,6 +2001,8 @@ namespace brutal {
             debug_text_printf(x, y, Vec3(0.7f, 0.7f, 0.7f), "Name: %s %u", type_text, editor->selection_index);
             y += kLineHeight;
             debug_text_printf(x, y, Vec3(0.7f, 0.7f, 0.7f), "Id: %d", editor->selectedEntityId);
+            y += kLineHeight;
+            debug_text_printf(x, y, Vec3(0.7f, 0.7f, 0.7f), "Selected: %zu", editor->selected_entities.size());
             y += kLineHeight;
 
             Transform transform;
@@ -1630,6 +2091,14 @@ namespace brutal {
             else if (editor->gizmo_mode == EditorState::GizmoMode::Rotate) mode = "Rotate (E)";
             else if (editor->gizmo_mode == EditorState::GizmoMode::Scale) mode = "Scale (R)";
             debug_text_printf(x, y, Vec3(0.7f, 0.9f, 0.7f), "Mode: %s", mode);
+            y += kLineHeight;
+
+            const char* pivot_label = editor->pivot_mode == EditorState::PivotMode::Object ? "Pivot: Object" : "Pivot: Selection Center";
+            if (ui_button(editor, input, kInspectorPivotModeId, x, y, 200, pivot_label)) {
+                editor->pivot_mode = (editor->pivot_mode == EditorState::PivotMode::Object)
+                    ? EditorState::PivotMode::SelectionCenter
+                    : EditorState::PivotMode::Object;
+            }
             y += kLineHeight;
 
             bool snap = editor->snap_enabled;
@@ -1731,9 +2200,11 @@ namespace brutal {
         editor->ortho_left_zoom = 10.0f;
         editor->move_speed = 6.0f;
         editor->look_sensitivity = 0.0025f;
+        editor->selected_entities.clear();
         editor->selection_type = SelectionType::None;
         editor->selection_index = 0;
         editor->selectedEntityId = kInvalidEntityId;
+        editor->pivot_mode = EditorState::PivotMode::Object;
         editor->gizmo_mode = EditorState::GizmoMode::Translate;
         editor->snap_enabled = false;
         editor->snap_value = 0.5f;
@@ -1758,6 +2229,7 @@ namespace brutal {
         editor->gizmo_drag_type = SelectionType::None;
         editor->gizmo_drag_index = 0;
         editor->gizmo_local_space = false;
+        editor->gizmo_drag_targets.clear();
         editor->undo_stack.clear();
         editor->redo_stack.clear();
         editor->inspector_edit_active = false;
@@ -1769,6 +2241,11 @@ namespace brutal {
         editor->rebuild_world = false;
         editor->rebuild_collision = false;
         editor->activeViewportId = kViewportIdPerspective;
+        editor->box_select_active = false;
+        editor->box_select_start = Vec2(0.0f, 0.0f);
+        editor->box_select_end = Vec2(0.0f, 0.0f);
+        editor->box_select_additive = false;
+        editor->box_select_viewport_id = kViewportIdPerspective;
         editor->ui_active_id = 0;
         editor->ui_hot_id = 0;
         editor->ui_last_mouse_x = 0;
@@ -1791,32 +2268,33 @@ namespace brutal {
         Viewport viewports[kEditorViewportCount] = {};
         i32 viewport_count = 0;
         editor_build_viewports(editor, platform, viewports, &viewport_count);
+        bool ui_keyboard_capture = editor->ui_active_id != 0;
 
-        if (platform_key_pressed(input, KEY_Q)) {
+        if (!ui_keyboard_capture && platform_key_pressed(input, KEY_Q)) {
             editor->gizmo_mode = EditorState::GizmoMode::None;
             editor_finalize_gizmo_drag(editor, scene, false);
         }
-        if (platform_key_pressed(input, KEY_W)) {
+        if (!ui_keyboard_capture && platform_key_pressed(input, KEY_W)) {
             editor->gizmo_mode = EditorState::GizmoMode::Translate;
         }
-        if (platform_key_pressed(input, KEY_E)) {
+        if (!ui_keyboard_capture && platform_key_pressed(input, KEY_E)) {
             editor->gizmo_mode = EditorState::GizmoMode::Rotate;
         }
-        if (platform_key_pressed(input, KEY_R)) {
+        if (!ui_keyboard_capture && platform_key_pressed(input, KEY_R)) {
             editor->gizmo_mode = EditorState::GizmoMode::Scale;
         }
-        if (platform_key_pressed(input, KEY_G)) {
+        if (!ui_keyboard_capture && platform_key_pressed(input, KEY_G)) {
             editor->snap_enabled = !editor->snap_enabled;
         }
-        if (platform_key_pressed(input, KEY_L)) {
+        if (!ui_keyboard_capture && platform_key_pressed(input, KEY_L)) {
             editor->gizmo_local_space = !editor->gizmo_local_space;
         }
 
         bool ctrl_down = platform_key_down(input, KEY_CONTROL) || platform_key_down(input, KEY_LCONTROL);
-        if (ctrl_down && platform_key_pressed(input, KEY_S)) {
+        if (!ui_keyboard_capture && ctrl_down && platform_key_pressed(input, KEY_S)) {
             editor_save_scene(editor->scene_path, scene);
         }
-        if (ctrl_down && platform_key_pressed(input, KEY_O)) {
+        if (!ui_keyboard_capture && ctrl_down && platform_key_pressed(input, KEY_O)) {
             if (editor_load_scene(editor->scene_path, scene)) {
                 editor->rebuild_world = true;
                 editor->rebuild_collision = true;
@@ -1825,35 +2303,74 @@ namespace brutal {
         }
 
         bool shift_down = platform_key_down(input, KEY_SHIFT);
-        if (ctrl_down && platform_key_pressed(input, KEY_Z)) {
-            if (shift_down) {
+        if (!ui_keyboard_capture && ctrl_down && platform_key_pressed(input, KEY_Z)) {
+            bool redo = shift_down;
+            if (redo) {
                 if (!editor->redo_stack.empty()) {
-                    TransformCommand cmd = editor->redo_stack.back();
+                    EditorCommand cmd = editor->redo_stack.back();
                     editor->redo_stack.pop_back();
-                    if (editor_transform_target_valid(scene, cmd.type, cmd.index)) {
-                        editor_set_transform_for_target(editor, scene, cmd.type, cmd.index, cmd.after);
-                        editor->undo_stack.push_back(cmd);
+                    if (cmd.type == EditorCommand::Type::Transform) {
+                        if (editor_transform_target_valid(scene, cmd.transform.type, cmd.transform.index)) {
+                            editor_set_transform_for_target(editor, scene, cmd.transform.type, cmd.transform.index, cmd.transform.after);
+                            editor->undo_stack.push_back(cmd);
+                        }
+                    }
+                    else {
+                        if (editor_apply_entity_command(editor, scene, cmd.entity, false)) {
+                            editor->undo_stack.push_back(cmd);
+                        }
                     }
                 }
             }
             else if (!editor->undo_stack.empty()) {
-                TransformCommand cmd = editor->undo_stack.back();
+                EditorCommand cmd = editor->undo_stack.back();
                 editor->undo_stack.pop_back();
-                if (editor_transform_target_valid(scene, cmd.type, cmd.index)) {
-                    editor_set_transform_for_target(editor, scene, cmd.type, cmd.index, cmd.before);
-                    editor->redo_stack.push_back(cmd);
+                if (cmd.type == EditorCommand::Type::Transform) {
+                    if (editor_transform_target_valid(scene, cmd.transform.type, cmd.transform.index)) {
+                        editor_set_transform_for_target(editor, scene, cmd.transform.type, cmd.transform.index, cmd.transform.before);
+                        editor->redo_stack.push_back(cmd);
+                    }
+                }
+                else {
+                    if (editor_apply_entity_command(editor, scene, cmd.entity, true)) {
+                        editor->redo_stack.push_back(cmd);
+                    }
                 }
             }
         }
-        if (ctrl_down && platform_key_pressed(input, KEY_Y)) {
+        if (!ui_keyboard_capture && ctrl_down && platform_key_pressed(input, KEY_Y)) {
             if (!editor->redo_stack.empty()) {
-                TransformCommand cmd = editor->redo_stack.back();
+                EditorCommand cmd = editor->redo_stack.back();
                 editor->redo_stack.pop_back();
-                if (editor_transform_target_valid(scene, cmd.type, cmd.index)) {
-                    editor_set_transform_for_target(editor, scene, cmd.type, cmd.index, cmd.after);
-                    editor->undo_stack.push_back(cmd);
+                if (cmd.type == EditorCommand::Type::Transform) {
+                    if (editor_transform_target_valid(scene, cmd.transform.type, cmd.transform.index)) {
+                        editor_set_transform_for_target(editor, scene, cmd.transform.type, cmd.transform.index, cmd.transform.after);
+                        editor->undo_stack.push_back(cmd);
+                    }
+                }
+                else {
+                    if (editor_apply_entity_command(editor, scene, cmd.entity, false)) {
+                        editor->undo_stack.push_back(cmd);
+                    }
                 }
             }
+        }
+
+        if (!ui_keyboard_capture && platform_key_pressed(input, KEY_F)) {
+            for (i32 i = 0; i < viewport_count; ++i) {
+                if (viewports[i].id == editor->activeViewportId) {
+                    editor_focus_selected(editor, scene, &viewports[i]);
+                    break;
+                }
+            }
+        }
+
+        if (!ui_keyboard_capture && ctrl_down && platform_key_pressed(input, KEY_D)) {
+            editor_duplicate_selected(editor, scene);
+        }
+
+        if (!ui_keyboard_capture && platform_key_pressed(input, KEY_DELETE)) {
+            editor_delete_selected(editor, scene);
         }
 
         if (input->mouse.left.pressed && !mouse_over_ui(platform)) {
@@ -1957,9 +2474,46 @@ namespace brutal {
             gizmo_consumed = editor_update_gizmo(editor, scene, platform, *active_viewport);
         }
 
+        if (editor->box_select_active) {
+            if (!input->mouse.left.down) {
+                Viewport* box_viewport = nullptr;
+                for (i32 i = 0; i < viewport_count; ++i) {
+                    if (viewports[i].id == editor->box_select_viewport_id) {
+                        box_viewport = &viewports[i];
+                        break;
+                    }
+                }
+                if (box_viewport) {
+                    RectF rect = rectf_from_points(editor->box_select_start, editor->box_select_end);
+                    editor_apply_box_selection(editor, scene, *box_viewport, rect, editor->box_select_additive);
+                }
+                editor->box_select_active = false;
+            }
+            else {
+                editor->box_select_end = Vec2((f32)input->mouse.x, (f32)input->mouse.y);
+            }
+        }
+
         if (active_viewport->isActive && !platform->mouse_captured && input->mouse.left.pressed && active_viewport->isHovered && !ui_capture) {
             if (!gizmo_consumed) {
-                editor_update_selection(editor, scene, platform, *active_viewport);
+                SelectionType hit_type = SelectionType::None;
+                u32 hit_index = 0;
+                bool hit = editor_pick_entity(scene, *active_viewport, input, &hit_type, &hit_index);
+                if (hit) {
+                    if (shift_down) {
+                        editor_toggle_selection(editor, hit_type, hit_index);
+                    }
+                    else {
+                        editor_select_single(editor, hit_type, hit_index);
+                    }
+                }
+                else {
+                    editor->box_select_active = true;
+                    editor->box_select_start = Vec2((f32)input->mouse.x, (f32)input->mouse.y);
+                    editor->box_select_end = editor->box_select_start;
+                    editor->box_select_additive = shift_down;
+                    editor->box_select_viewport_id = active_viewport->id;
+                }
             }
         }
     }
@@ -1972,6 +2526,14 @@ namespace brutal {
         editor_draw_top_bar(editor, scene, platform);
         ui_end(editor, &platform->input);
         editor_update_inspector_edit_session(editor, scene);
+        if (editor->box_select_active) {
+            RectF rect = rectf_from_points(editor->box_select_start, editor->box_select_end);
+            Vec3 color(0.8f, 0.9f, 1.0f);
+            debug_line_2d(Vec2(rect.min_x, rect.min_y), Vec2(rect.max_x, rect.min_y), color);
+            debug_line_2d(Vec2(rect.max_x, rect.min_y), Vec2(rect.max_x, rect.max_y), color);
+            debug_line_2d(Vec2(rect.max_x, rect.max_y), Vec2(rect.min_x, rect.max_y), color);
+            debug_line_2d(Vec2(rect.min_x, rect.max_y), Vec2(rect.min_x, rect.min_y), color);
+        }
 
         debug_text_printf(kPanelPadding, platform->window_height - kAssetsHeight - kLineHeight * 3,
             Vec3(0.7f, 0.7f, 0.7f), "Viewport: %d  Selected: %d", editor->activeViewportId, editor->selectedEntityId);

@@ -16,6 +16,10 @@ void debug_draw_shutdown();
 void debug_text_printf(i32 x, i32 y, const Vec3& color, const char* fmt, ...);
 void debug_text_flush(i32 screen_w, i32 screen_h);
 
+// 2D line rendering (screen space)
+void debug_line_2d(const Vec2& a, const Vec2& b, const Vec3& color);
+void debug_lines_flush_2d(i32 screen_w, i32 screen_h);
+
 // 3D line rendering (world space)
 void debug_line(const Vec3& a, const Vec3& b, const Vec3& color);
 void debug_box(const AABB& box, const Vec3& color);

@@ -259,8 +259,15 @@ int main() {
             }
         }
 
-        if (platform_key_pressed(&platform.input, KEY_F9)) {
-            editor_set_active(&editor, !editor.active, &platform, &player);
+        if (platform_key_pressed(&platform.input, KEY_F9) || platform_key_pressed(&platform.input, KEY_P)) {
+            bool next_active = !editor.active;
+            editor_set_active(&editor, next_active, &platform, &player);
+            if (next_active) {
+                platform_disable_mouse_look(&platform);
+            }
+            else {
+                platform_enable_mouse_look(&platform);
+            }
         }
 
         player_capture_input(&player, &platform.input, editor.active);
@@ -367,30 +374,36 @@ int main() {
                     Mat4 model = transform_to_matrix(&prop.transform);
                     renderer_draw_mesh(&renderer, renderer_get_cube_mesh(&renderer), model, prop.color);
                 }
-                if (editor.selection_type != SelectionType::None) {
-                    const Vec3 outline_color(1.0f, 0.85f, 0.2f);
+                if (!editor.selected_entities.empty()) {
                     const f32 outline_scale = 1.02f;
-                    if (editor.selection_type == SelectionType::Prop) {
-                        const PropEntity& prop = scene.props[editor.selection_index];
-                        if (prop.active) {
-                            Mat4 model = transform_to_matrix(&prop.transform);
+                    for (const auto& item : editor.selected_entities) {
+                        bool primary = item.id == editor.selectedEntityId;
+                        Vec3 outline_color = primary ? Vec3(1.0f, 0.85f, 0.2f) : Vec3(0.7f, 0.7f, 1.0f);
+                        if (item.type == SelectionType::Prop) {
+                            if (item.index >= scene.prop_count) continue;
+                            const PropEntity& prop = scene.props[item.index];
+                            if (prop.active) {
+                                Mat4 model = transform_to_matrix(&prop.transform);
+                                renderer_draw_mesh_outline(&renderer, renderer_get_cube_mesh(&renderer), model, outline_color, outline_scale);
+                            }
+                        }
+                        else if (item.type == SelectionType::Brush) {
+                            if (item.index >= scene.brush_count) continue;
+                            const Brush& brush = scene.brushes[item.index];
+                            AABB brush_aabb = brush_to_aabb(&brush);
+                            Vec3 center = aabb_center(brush_aabb);
+                            Vec3 size = aabb_half_size(brush_aabb) * 2.0f;
+                            Mat4 model = mat4_multiply(mat4_translation(center), mat4_scale(size));
+                            renderer_draw_mesh_outline(&renderer, renderer_get_cube_mesh(&renderer), model, outline_color, outline_scale);
+                        }
+                        else if (item.type == SelectionType::Light) {
+                            if (item.index >= scene.lights.point_light_count) continue;
+                            const PointLight& light = scene.lights.point_lights[item.index];
+                            Mat4 model = mat4_multiply(mat4_translation(light.position), mat4_scale(Vec3(0.2f, 0.2f, 0.2f)));
                             renderer_draw_mesh_outline(&renderer, renderer_get_cube_mesh(&renderer), model, outline_color, outline_scale);
                         }
                     }
-                    else if (editor.selection_type == SelectionType::Brush) {
-                        const Brush& brush = scene.brushes[editor.selection_index];
-                        AABB brush_aabb = brush_to_aabb(&brush);
-                        Vec3 center = aabb_center(brush_aabb);
-                        Vec3 size = aabb_half_size(brush_aabb) * 2.0f;
-                        Mat4 model = mat4_multiply(mat4_translation(center), mat4_scale(size));
-                        renderer_draw_mesh_outline(&renderer, renderer_get_cube_mesh(&renderer), model, outline_color, outline_scale);
-                    }
-                    else if (editor.selection_type == SelectionType::Light) {
-                        const PointLight& light = scene.lights.point_lights[editor.selection_index];
-                        Mat4 model = mat4_multiply(mat4_translation(light.position), mat4_scale(Vec3(0.2f, 0.2f, 0.2f)));
-                        renderer_draw_mesh_outline(&renderer, renderer_get_cube_mesh(&renderer), model, Vec3(1.0f, 0.9f, 0.4f), outline_scale);
-                    }
-                }
+                    
 
                 if (viewport.type == ViewportType::Perspective) {
                     if (editor.show_grid) {
@@ -464,6 +477,8 @@ int main() {
                 debug_lines_flush(&player.camera, platform.window_width, platform.window_height);
             }
         }
+
+        debug_lines_flush_2d(platform.window_width, platform.window_height);
 
         debug_text_flush(platform.window_width, platform.window_height);
 

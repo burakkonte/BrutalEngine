@@ -47,12 +47,41 @@ namespace brutal {
         Light
     };
 
+    struct SelectionItem {
+        SelectionType type;
+        u32 index;
+        i32 id;
+    };
+
     struct TransformCommand {
         SelectionType type;
         u32 index;
         Transform before;
         Transform after;
     };
+    struct EntityCommand {
+        enum class Action {
+            Create,
+            Delete
+        };
+        Action action;
+        SelectionType type;
+        u32 index;
+        Brush brush;
+        PropEntity prop;
+        PointLight light;
+    };
+
+    struct EditorCommand {
+        enum class Type {
+            Transform,
+            Entity
+        };
+        Type type;
+        TransformCommand transform;
+        EntityCommand entity;
+    };
+
     struct EditorState {
         bool active;
         Camera camera;
@@ -66,10 +95,16 @@ namespace brutal {
         f32 look_sensitivity;
 
         
-
+        std::vector<SelectionItem> selected_entities;
         SelectionType selection_type;
         u32 selection_index;
         i32 selectedEntityId;
+
+        enum class PivotMode {
+            Object,
+            SelectionCenter
+        };
+        PivotMode pivot_mode;
 
         enum class GizmoMode {
             None,
@@ -111,9 +146,15 @@ namespace brutal {
         SelectionType gizmo_drag_type;
         u32 gizmo_drag_index;
         bool gizmo_local_space;
+        struct GizmoDragTarget {
+            SelectionType type;
+            u32 index;
+            Transform start;
+        };
+        std::vector<GizmoDragTarget> gizmo_drag_targets;
 
-        std::vector<TransformCommand> undo_stack;
-        std::vector<TransformCommand> redo_stack;
+        std::vector<EditorCommand> undo_stack;
+        std::vector<EditorCommand> redo_stack;
         bool inspector_edit_active;
         i32 inspector_edit_ui_id;
         SelectionType inspector_edit_type;
@@ -125,6 +166,12 @@ namespace brutal {
         bool rebuild_world;
         bool rebuild_collision;
         i32 activeViewportId;
+
+        bool box_select_active;
+        Vec2 box_select_start;
+        Vec2 box_select_end;
+        bool box_select_additive;
+        i32 box_select_viewport_id;
 
         i32 ui_active_id;
         i32 ui_hot_id;

@@ -58,6 +58,28 @@ void main() {
 }
 )";
 
+static const char* line2d_vert = R"(
+#version 330 core
+layout(location = 0) in vec2 a_Pos;
+layout(location = 1) in vec3 a_Color;
+uniform vec2 u_Screen;
+out vec3 v_Color;
+void main() {
+    vec2 p = a_Pos / u_Screen * 2.0 - 1.0;
+    gl_Position = vec4(p.x, -p.y, 0.0, 1.0);
+    v_Color = a_Color;
+}
+)";
+
+static const char* line2d_frag = R"(
+#version 330 core
+in vec3 v_Color;
+out vec4 FragColor;
+void main() {
+    FragColor = vec4(v_Color, 1.0);
+}
+)";
+
 // Simple 8x8 bitmap font (ASCII 32-126)
 static u8 g_font[95][8] = {
     {0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00}, // space
@@ -159,6 +181,7 @@ static u8 g_font[95][8] = {
 
 struct TextVert { f32 x, y, u, v, r, g, b; };
 struct LineVert { f32 x, y, z, r, g, b; };
+struct Line2DVert { f32 x, y, r, g, b; };
 
 static Shader g_text_shader;
 static u32 g_font_texture;
@@ -172,6 +195,12 @@ static u32 g_line_vao, g_line_vbo;
 static LineVert g_line_verts[8192];
 static u32 g_line_count;
 static i32 g_line_loc_viewproj;
+
+static Shader g_line2d_shader;
+static u32 g_line2d_vao, g_line2d_vbo;
+static Line2DVert g_line2d_verts[4096];
+static u32 g_line2d_count;
+static i32 g_line2d_loc_screen;
 
 bool debug_draw_init() {
     if (!shader_create(&g_text_shader, text_vert, text_frag)) return false;
@@ -223,6 +252,20 @@ bool debug_draw_init() {
     glBindVertexArray(0);
     g_line_count = 0;
 
+    if (!shader_create(&g_line2d_shader, line2d_vert, line2d_frag)) return false;
+    g_line2d_loc_screen = glGetUniformLocation(g_line2d_shader.program, "u_Screen");
+    glGenVertexArrays(1, &g_line2d_vao);
+    glBindVertexArray(g_line2d_vao);
+    glGenBuffers(1, &g_line2d_vbo);
+    glBindBuffer(GL_ARRAY_BUFFER, g_line2d_vbo);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(g_line2d_verts), nullptr, GL_DYNAMIC_DRAW);
+    glEnableVertexAttribArray(0);
+    glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, sizeof(Line2DVert), (void*)0);
+    glEnableVertexAttribArray(1);
+    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, sizeof(Line2DVert), (void*)(2 * sizeof(f32)));
+    glBindVertexArray(0);
+    g_line2d_count = 0;
+
     return true;
 }
 
@@ -234,6 +277,9 @@ void debug_draw_shutdown() {
     glDeleteBuffers(1, &g_line_vbo);
     glDeleteVertexArrays(1, &g_line_vao);
     shader_destroy(&g_line_shader);
+    glDeleteBuffers(1, &g_line2d_vbo);
+    glDeleteVertexArrays(1, &g_line2d_vao);
+    shader_destroy(&g_line2d_shader);
 }
 
 static void add_char(f32 x, f32 y, char c, const Vec3& col) {
@@ -280,6 +326,29 @@ void debug_text_flush(i32 sw, i32 sh) {
     glDisable(GL_BLEND);
     glEnable(GL_DEPTH_TEST);
     g_text_count = 0;
+}
+
+void debug_line_2d(const Vec2& a, const Vec2& b, const Vec3& color) {
+    if (g_line2d_count + 2 > 4096) return;
+    Line2DVert* v = &g_line2d_verts[g_line2d_count];
+    v[0] = { a.x, a.y, color.x, color.y, color.z };
+    v[1] = { b.x, b.y, color.x, color.y, color.z };
+    g_line2d_count += 2;
+}
+
+void debug_lines_flush_2d(i32 screen_w, i32 screen_h) {
+    if (g_line2d_count == 0) return;
+    glDisable(GL_DEPTH_TEST);
+    glLineWidth(1.0f);
+    glBindBuffer(GL_ARRAY_BUFFER, g_line2d_vbo);
+    glBufferSubData(GL_ARRAY_BUFFER, 0, g_line2d_count * sizeof(Line2DVert), g_line2d_verts);
+    shader_bind(&g_line2d_shader);
+    if (g_line2d_loc_screen >= 0) glUniform2f(g_line2d_loc_screen, (f32)screen_w, (f32)screen_h);
+    glBindVertexArray(g_line2d_vao);
+    glDrawArrays(GL_LINES, 0, g_line2d_count);
+    glBindVertexArray(0);
+    glEnable(GL_DEPTH_TEST);
+    g_line2d_count = 0;
 }
 
 void debug_line(const Vec3& a, const Vec3& b, const Vec3& color) {
