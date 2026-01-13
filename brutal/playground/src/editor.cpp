@@ -14,6 +14,10 @@
 #include <sstream>
 #include <string>
 
+#ifdef abs
+#undef abs
+#endif
+
 namespace brutal {
 
     namespace {
