@@ -171,7 +171,7 @@ namespace brutal {
             editor->ui_hot_id = 0;
         }
 
-        void ui_end(EditorState* editor, const InputState* input) {}
+
 
         void ui_end(EditorState* editor, const InputState* input) {
             if (!input->mouse.left.down) {
