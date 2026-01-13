@@ -8,6 +8,9 @@
 
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
+#ifdef abs
+#undef abs
+#endif
 
 namespace brutal {
 
