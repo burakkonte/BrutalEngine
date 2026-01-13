@@ -47,6 +47,7 @@ namespace brutal {
         i32 selectedEntityId;
 
         enum class GizmoMode {
+            None,
             Translate,
             Rotate,
             Scale
@@ -56,6 +57,25 @@ namespace brutal {
         bool snap_enabled;
         f32 snap_value;
         bool show_grid;
+
+        enum class GizmoAxis {
+            None,
+            X,
+            Y,
+            Z
+        };
+
+        GizmoAxis gizmo_axis_hot;
+        GizmoAxis gizmo_axis_active;
+        bool gizmo_drag_active;
+        Vec3 gizmo_drag_start_pos;
+        Vec3 gizmo_drag_plane_normal;
+        Vec3 gizmo_drag_plane_point;
+        Vec3 gizmo_drag_start_hit;
+        Vec3 gizmo_drag_axis;
+        Vec3 gizmo_drag_brush_size;
+        i32 gizmo_drag_entity_id;
+        bool gizmo_local_space;
 
         char scene_path[256];
 
