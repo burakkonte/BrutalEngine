@@ -10,6 +10,25 @@ namespace brutal {
     struct PlatformState;
     struct Player;
     struct RendererState;
+    struct Rect {
+        i32 x;
+        i32 y;
+        i32 w;
+        i32 h;
+    };
+
+    enum class ViewportType {
+        Perspective
+    };
+
+    struct Viewport {
+        i32 id;
+        Rect rect;
+        Camera camera;
+        ViewportType type;
+        bool isHovered;
+        bool isActive;
+    };
     struct EditorState {
         bool active;
         Camera camera;
@@ -25,6 +44,7 @@ namespace brutal {
 
         SelectionType selection_type;
         u32 selection_index;
+        i32 selectedEntityId;
 
         enum class GizmoMode {
             Translate,
@@ -41,6 +61,7 @@ namespace brutal {
 
         bool rebuild_world;
         bool rebuild_collision;
+        i32 activeViewportId;
 
         i32 ui_active_id;
         i32 ui_hot_id;

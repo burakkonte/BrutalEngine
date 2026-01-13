@@ -28,11 +28,16 @@ namespace brutal {
         constexpr i32 kInspectorWidth = 320;
         constexpr i32 kAssetsHeight = 140;
         constexpr f32 kDragSpeed = 0.01f;
+        constexpr i32 kMainViewportId = 0;
+        constexpr i32 kInvalidEntityId = -1;
 
         struct Ray {
             Vec3 origin;
             Vec3 dir;
         };
+        i32 pack_entity_id(EditorState::SelectionType type, u32 index) {
+            return ((i32)type << 24) | (i32)index;
+        }
 
         bool ray_intersect_aabb(const Ray& ray, const AABB& aabb, f32* out_t) {
             f32 tmin = 0.0f;
@@ -63,10 +68,13 @@ namespace brutal {
             return true;
         }
 
-        Ray make_mouse_ray(const Camera& camera, i32 mouse_x, i32 mouse_y, i32 screen_w, i32 screen_h) {
-            f32 ndc_x = (2.0f * (f32)mouse_x / (f32)screen_w) - 1.0f;
-            f32 ndc_y = 1.0f - (2.0f * (f32)mouse_y / (f32)screen_h);
-            f32 aspect = (f32)screen_w / (f32)screen_h;
+        Ray build_ray_for_viewport(const Viewport& viewport, i32 mouse_x, i32 mouse_y) {
+            i32 local_x = mouse_x - viewport.rect.x;
+            i32 local_y = mouse_y - viewport.rect.y;
+            f32 ndc_x = (2.0f * (f32)local_x / (f32)viewport.rect.w) - 1.0f;
+            f32 ndc_y = 1.0f - (2.0f * (f32)local_y / (f32)viewport.rect.h);
+            f32 aspect = (f32)viewport.rect.w / (f32)viewport.rect.h;
+            const Camera& camera = viewport.camera;
             f32 tan_half_fov = tanf(camera.fov * 0.5f);
 
             Vec3 forward = camera_forward(&camera);
@@ -171,11 +179,13 @@ namespace brutal {
         void editor_select_none(EditorState* editor) {
             editor->selection_type = EditorState::SelectionType::None;
             editor->selection_index = 0;
+            editor->selectedEntityId = kInvalidEntityId;
         }
 
         void editor_select(EditorState* editor, EditorState::SelectionType type, u32 index) {
             editor->selection_type = type;
             editor->selection_index = index;
+            editor->selectedEntityId = pack_entity_id(type, index);
         }
 
         void editor_apply_snap(EditorState* editor, Vec3* value) {
@@ -590,12 +600,45 @@ namespace brutal {
             return true;
         }
 
-        void editor_update_selection(EditorState* editor, Scene* scene, PlatformState* platform) {
+        Viewport editor_main_viewport(EditorState* editor, const PlatformState* platform) {
+            Viewport viewport = {};
+            viewport.id = kMainViewportId;
+            viewport.rect = { 0, 0, platform->window_width, platform->window_height };
+            viewport.camera = editor->camera;
+            viewport.type = ViewportType::Perspective;
+            viewport.isHovered = mouse_in_rect(&platform->input, viewport.rect.x, viewport.rect.y, viewport.rect.w, viewport.rect.h);
+            viewport.isActive = (editor->activeViewportId == viewport.id);
+            return viewport;
+        }
+
+        void editor_validate_selection(EditorState* editor, const Scene* scene) {
+            bool valid = true;
+            if (editor->selection_type == EditorState::SelectionType::Brush) {
+                valid = editor->selection_index < scene->brush_count;
+            }
+            else if (editor->selection_type == EditorState::SelectionType::Prop) {
+                valid = editor->selection_index < scene->prop_count;
+            }
+            else if (editor->selection_type == EditorState::SelectionType::Light) {
+                valid = editor->selection_index < scene->lights.point_light_count;
+            }
+            else {
+                valid = editor->selection_type == EditorState::SelectionType::None;
+            }
+
+            if (!valid) {
+                editor_select_none(editor);
+            }
+            else if (editor->selection_type == EditorState::SelectionType::None) {
+                editor->selectedEntityId = kInvalidEntityId;
+            }
+        }
+
+        void editor_update_selection(EditorState* editor, Scene* scene, PlatformState* platform, const Viewport& viewport) {
             const InputState* input = &platform->input;
             if (!input->mouse.left.pressed) return;
 
-            Ray ray = make_mouse_ray(editor->camera, input->mouse.x, input->mouse.y,
-                platform->window_width, platform->window_height);
+            Ray ray = build_ray_for_viewport(viewport, input->mouse.x, input->mouse.y);
 
             f32 best_t = 1e9f;
             EditorState::SelectionType best_type = EditorState::SelectionType::None;
@@ -615,6 +658,17 @@ namespace brutal {
                 if (ray_intersect_aabb(ray, prop_aabb(scene->props[i]), &t) && t < best_t) {
                     best_t = t;
                     best_type = EditorState::SelectionType::Prop;
+                    best_index = i;
+                }
+            }
+
+            for (u32 i = 0; i < scene->lights.point_light_count; ++i) {
+                f32 t = 0.0f;
+                Vec3 light_size(0.2f, 0.2f, 0.2f);
+                AABB light_aabb = aabb_from_center_size(scene->lights.point_lights[i].position, light_size);
+                if (ray_intersect_aabb(ray, light_aabb, &t) && t < best_t) {
+                    best_t = t;
+                    best_type = EditorState::SelectionType::Light;
                     best_index = i;
                 }
             }
@@ -877,6 +931,7 @@ namespace brutal {
         editor->look_sensitivity = 0.0025f;
         editor->selection_type = EditorState::SelectionType::None;
         editor->selection_index = 0;
+        editor->selectedEntityId = kInvalidEntityId;
         editor->gizmo_mode = EditorState::GizmoMode::Translate;
         editor->snap_enabled = false;
         editor->snap_value = 0.5f;
@@ -884,6 +939,7 @@ namespace brutal {
         std::snprintf(editor->scene_path, sizeof(editor->scene_path), "scene.json");
         editor->rebuild_world = false;
         editor->rebuild_collision = false;
+        editor->activeViewportId = kMainViewportId;
         editor->ui_active_id = 0;
         editor->ui_hot_id = 0;
         editor->ui_last_mouse_x = 0;
@@ -902,6 +958,8 @@ namespace brutal {
 
     void editor_update(EditorState* editor, Scene* scene, PlatformState* platform, f32 dt) {
         const InputState* input = &platform->input;
+        editor_validate_selection(editor, scene);
+        Viewport viewport = editor_main_viewport(editor, platform);
 
         if (platform_key_pressed(input, KEY_W)) editor->gizmo_mode = EditorState::GizmoMode::Translate;
         if (platform_key_pressed(input, KEY_E)) editor->gizmo_mode = EditorState::GizmoMode::Rotate;
@@ -919,36 +977,44 @@ namespace brutal {
             }
         }
 
-        if (input->mouse.right.pressed && !mouse_over_ui(platform)) {
+        if (viewport.isActive && viewport.isHovered && input->mouse.right.pressed && !mouse_over_ui(platform)) {
             platform_set_mouse_capture(platform, true);
         }
         if (input->mouse.right.released) {
             platform_set_mouse_capture(platform, false);
         }
 
-        if (platform->mouse_captured) {
+        if (viewport.isActive && platform->mouse_captured) {
             f32 dyaw = (f32)input->mouse.delta_x * editor->look_sensitivity;
             f32 dpitch = (f32)(-input->mouse.delta_y) * editor->look_sensitivity;
             camera_rotate(&editor->camera, dyaw, dpitch);
         }
 
-        Vec3 forward = camera_forward(&editor->camera);
-        Vec3 right = camera_right(&editor->camera);
-        Vec3 movement(0, 0, 0);
-        if (platform_key_down(input, KEY_W)) movement = movement + forward;
-        if (platform_key_down(input, KEY_S)) movement = movement - forward;
-        if (platform_key_down(input, KEY_D)) movement = movement + right;
-        if (platform_key_down(input, KEY_A)) movement = movement - right;
-        if (platform_key_down(input, KEY_SPACE)) movement.y += 1.0f;
-        if (platform_key_down(input, KEY_Q)) movement.y -= 1.0f;
+        if (viewport.isActive) {
+            Vec3 forward = camera_forward(&editor->camera);
+            Vec3 right = camera_right(&editor->camera);
+            Vec3 movement(0, 0, 0);
+            if (platform_key_down(input, KEY_W)) movement = movement + forward;
+            if (platform_key_down(input, KEY_S)) movement = movement - forward;
+            if (platform_key_down(input, KEY_D)) movement = movement + right;
+            if (platform_key_down(input, KEY_A)) movement = movement - right;
+            if (platform_key_down(input, KEY_SPACE)) movement.y += 1.0f;
+            if (platform_key_down(input, KEY_Q)) movement.y -= 1.0f;
 
-        if (vec3_length(movement) > 0.01f) {
-            movement = vec3_normalize(movement);
-            editor->camera.position = editor->camera.position + movement * (editor->move_speed * dt);
+            if (vec3_length(movement) > 0.01f) {
+                movement = vec3_normalize(movement);
+                editor->camera.position = editor->camera.position + movement * (editor->move_speed * dt);
+            }
         }
 
-        if (!platform->mouse_captured && input->mouse.left.pressed && !mouse_over_ui(platform)) {
-            editor_update_selection(editor, scene, platform);
+        viewport.camera = editor->camera;
+        if (input->mouse.left.pressed && viewport.isHovered && !mouse_over_ui(platform)) {
+            editor->activeViewportId = viewport.id;
+            viewport.isActive = true;
+        }
+
+        if (viewport.isActive && !platform->mouse_captured && input->mouse.left.pressed && viewport.isHovered && !mouse_over_ui(platform)) {
+            editor_update_selection(editor, scene, platform, viewport);
         }
 
         editor_apply_gizmo(editor, scene, platform);
@@ -961,6 +1027,9 @@ namespace brutal {
         editor_draw_assets(editor, scene, platform);
         editor_draw_top_bar(editor, scene, platform);
         ui_end(editor, &platform->input);
+
+        debug_text_printf(kPanelPadding, platform->window_height - kAssetsHeight - kLineHeight * 3,
+            Vec3(0.7f, 0.7f, 0.7f), "Viewport: %d  Selected: %d", editor->activeViewportId, editor->selectedEntityId);
 
         if (editor->selection_type == EditorState::SelectionType::Brush) {
             const Brush& brush = scene->brushes[editor->selection_index];

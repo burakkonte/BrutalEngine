@@ -15,6 +15,7 @@ struct LightEnvironment;
 
 struct RendererState {
     Shader lit_shader;
+    Shader flat_shader;
     Mesh cube_mesh;
     Mesh grid_mesh;
     i32 viewport_width, viewport_height;
@@ -43,6 +44,7 @@ void renderer_end_frame();
 void renderer_set_camera(RendererState* s, const Camera* c);
 void renderer_set_lights(RendererState* s, const LightEnvironment* l);
 void renderer_draw_mesh(RendererState* s, const Mesh* m, const Mat4& model, const Vec3& color);
+void renderer_draw_mesh_outline(RendererState* s, const Mesh* m, const Mat4& model, const Vec3& color, f32 scale);
 void renderer_draw_cube(RendererState* s, const Vec3& pos, const Vec3& scale, const Vec3& color);
 void renderer_draw_grid(RendererState* s);
 Mat4 renderer_get_view_projection(const RendererState* s);

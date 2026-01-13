@@ -101,11 +101,35 @@ for (int i = 0; i < u_SpotLightCount && i < MAX_SPOT_LIGHTS; i++) {
 }
 )";
 
+static const char* flat_vert = R"(
+#version 330 core
+layout(location = 0) in vec3 a_Position;
+uniform mat4 u_MVP;
+void main() {
+    gl_Position = u_MVP * vec4(a_Position, 1.0);
+}
+)";
+
+static const char* flat_frag = R"(
+#version 330 core
+uniform vec4 u_Color;
+out vec4 FragColor;
+void main() {
+    FragColor = u_Color;
+}
+)";
+
 bool renderer_init(RendererState* s, MemoryArena*) {
     if (!shader_create(&s->lit_shader, lit_vert, lit_frag)) {
         LOG_ERROR("Failed to create shader");
         return false;
     }
+    if (!shader_create(&s->flat_shader, flat_vert, flat_frag)) {
+        LOG_ERROR("Failed to create flat shader");
+        shader_destroy(&s->lit_shader);
+        return false;
+    }
+
     s->loc_camera_pos = glGetUniformLocation(s->lit_shader.program, "u_CameraPos");
     s->loc_ambient = glGetUniformLocation(s->lit_shader.program, "u_Ambient");
     s->loc_light_count = glGetUniformLocation(s->lit_shader.program, "u_LightCount");
@@ -147,6 +171,7 @@ void renderer_shutdown(RendererState* s) {
     mesh_destroy(&s->cube_mesh);
     mesh_destroy(&s->grid_mesh);
     shader_destroy(&s->lit_shader);
+    shader_destroy(&s->flat_shader);
 }
 
 void renderer_begin_frame(RendererState* s, i32 w, i32 h) {
@@ -237,6 +262,27 @@ void renderer_draw_mesh(RendererState* s, const Mesh* m, const Mat4& model, cons
     shader_set_color(&s->lit_shader, color.x, color.y, color.z, 1.0f);
     upload_lights(s, s->lights, s->camera_pos);
     mesh_draw(m);
+    s->draw_calls += 1;
+    s->vertices += m->vertex_count;
+    if (m->index_count > 0) {
+        s->triangles += m->index_count / 3;
+    }
+    else {
+        s->triangles += m->vertex_count / 3;
+    }
+}
+
+void renderer_draw_mesh_outline(RendererState* s, const Mesh* m, const Mat4& model, const Vec3& color, f32 scale) {
+    if (!m || !m->vao) return;
+    f32 safe_scale = (scale > 0.0f) ? scale : 1.0f;
+    Mat4 outline_model = mat4_multiply(model, mat4_scale(Vec3(safe_scale, safe_scale, safe_scale)));
+    Mat4 mvp = mat4_multiply(s->view_projection, outline_model);
+    shader_bind(&s->flat_shader);
+    shader_set_mvp(&s->flat_shader, mvp);
+    shader_set_color(&s->flat_shader, color.x, color.y, color.z, 1.0f);
+    glCullFace(GL_FRONT);
+    mesh_draw(m);
+    glCullFace(GL_BACK);
     s->draw_calls += 1;
     s->vertices += m->vertex_count;
     if (m->index_count > 0) {
