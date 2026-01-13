@@ -1,5 +1,6 @@
 #include "brutal/world/flashlight.h"
 #include "brutal/renderer/camera.h"
+#include "brutal/renderer/light.h"
 #include "brutal/math/vec.h"
 #include <algorithm>
 #include <cmath>

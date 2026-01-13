@@ -1,46 +1,45 @@
-set(ENGINE_SOURCES
-    private / core / logging.cpp
-    private / core / memory.cpp
-    private / core / profiler.cpp
-    private / core / time.cpp
-    private / core / platform_win32.cpp
-    private / math / geometry.cpp
-    private / renderer / gl_context.cpp
-    private / renderer / shader.cpp
-    private / renderer / mesh.cpp
-    private / renderer / renderer.cpp
-    private / renderer / camera.cpp
-    private / renderer / light.cpp
-    private / renderer / debug_draw.cpp
-    private / world / brush.cpp
-    private / world / entity.cpp
-    private / world / collision.cpp
-    private / world / scene.cpp
-    private / world / player.cpp
-    private / engine.cpp
-)
+#ifndef BRUTAL_WORLD_FLASHLIGHT_H
+#define BRUTAL_WORLD_FLASHLIGHT_H
 
-set(FLASHLIGHT_SRC private / world / flashlight.cpp)
-if (EXISTS "${CMAKE_CURRENT_LIST_DIR}/${FLASHLIGHT_SRC}")
-list(APPEND ENGINE_SOURCES ${ FLASHLIGHT_SRC })
-endif()
+#include "brutal/core/types.h"
+#include "brutal/math/vec.h"
 
-if (NOT TARGET brutal_engine)
-add_library(brutal_engine STATIC ${ ENGINE_SOURCES })
-endif()
+namespace brutal {
 
-target_include_directories(brutal_engine
-    PUBLIC public
-    PRIVATE private
-)
+    struct Camera;
+    struct LightEnvironment;
 
-target_compile_definitions(brutal_engine
-    PUBLIC
-    $<$<CONFIG:Release>:BRUTAL_ENABLE_PROFILER = 0>
-    $<$<NOT:$<CONFIG : Release>>:BRUTAL_ENABLE_PROFILER = 1>
-)
+    struct FlashlightConfig {
+        f32 range;
+        f32 intensity;
+        f32 inner_angle_deg;
+        f32 outer_angle_deg;
+        Vec3 color;
+        f32 falloff;
+        Vec3 position_offset;
+        bool enable_flicker;
+        f32 flicker_strength;
+        f32 flicker_speed;
+        f32 battery_drain_per_sec;
+    };
 
-target_link_libraries(brutal_engine
-    PUBLIC glad
-    PRIVATE user32 gdi32 opengl32 winmm
-)
+    struct PlayerFlashlight {
+        FlashlightConfig config;
+        bool enabled;
+        f32 battery_level;
+        f32 flicker_phase;
+        f32 intensity_scale;
+        u32 spot_light_index;
+        bool spot_light_registered;
+    };
+
+    void flashlight_init(PlayerFlashlight* flashlight);
+    void flashlight_enable(PlayerFlashlight* flashlight);
+    void flashlight_disable(PlayerFlashlight* flashlight);
+    void flashlight_toggle(PlayerFlashlight* flashlight);
+    void flashlight_update(PlayerFlashlight* flashlight, f32 dt);
+    void flashlight_apply_to_renderer(PlayerFlashlight* flashlight, const Camera* camera, LightEnvironment* env, bool render_enabled);
+
+}
+
+#endif
