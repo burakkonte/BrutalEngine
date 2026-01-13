@@ -10,6 +10,9 @@ struct Vec2 {
     f32 x, y;
     Vec2() : x(0), y(0) {}
     Vec2(f32 x, f32 y) : x(x), y(y) {}
+    Vec2 operator+(const Vec2& v) const { return { x + v.x, y + v.y }; }
+    Vec2 operator-(const Vec2& v) const { return { x - v.x, y - v.y }; }
+    Vec2 operator*(f32 s) const { return { x * s, y * s }; }
 };
 
 struct Vec3 {
