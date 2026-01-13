@@ -183,6 +183,19 @@ namespace brutal {
             g_platform->input.mouse.right.down = false;
             g_platform->input.mouse.right.released = true;
             return 0;
+        case WM_MBUTTONDOWN:
+            g_platform->input.mouse.middle.down = true;
+            g_platform->input.mouse.middle.pressed = true;
+            return 0;
+        case WM_MBUTTONUP:
+            g_platform->input.mouse.middle.down = false;
+            g_platform->input.mouse.middle.released = true;
+            return 0;
+        case WM_MOUSEWHEEL: {
+            const i16 delta = GET_WHEEL_DELTA_WPARAM(wp);
+            g_platform->input.mouse.wheel_delta += (i32)(delta / WHEEL_DELTA);
+            return 0;
+        }
         }
         return DefWindowProcA(hwnd, msg, wp, lp);
     }
@@ -267,8 +280,10 @@ namespace brutal {
 
         state->input.mouse.left.pressed = state->input.mouse.left.released = false;
         state->input.mouse.right.pressed = state->input.mouse.right.released = false;
+        state->input.mouse.middle.pressed = state->input.mouse.middle.released = false;
         state->input.mouse.delta_x = state->input.mouse.delta_y = 0;
         state->input.mouse.raw_dx = state->input.mouse.raw_dy = 0;
+        state->input.mouse.wheel_delta = 0;
 
         MSG msg;
         while (PeekMessageA(&msg, nullptr, 0, 0, PM_REMOVE)) {
@@ -348,6 +363,7 @@ namespace brutal {
         state->input.mouse.delta_y = 0;
         state->input.mouse.raw_dx = 0;
         state->input.mouse.raw_dy = 0;
+        state->input.mouse.wheel_delta = 0;
     }
 
     void platform_mouse_look_record(PlatformState* state,

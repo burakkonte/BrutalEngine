@@ -29,7 +29,7 @@ namespace brutal {
         constexpr i32 kInspectorWidth = 320;
         constexpr i32 kAssetsHeight = 140;
         constexpr f32 kDragSpeed = 0.01f;
-        constexpr i32 kMainViewportId = 0;
+
         constexpr i32 kInvalidEntityId = -1;
         constexpr f32 kGizmoScreenFactor = 0.15f;
         constexpr f32 kGizmoMinScale = 0.25f;
@@ -60,6 +60,27 @@ namespace brutal {
             Vec3 normal;
             f32 d;
         };
+
+        Ray RayFromPerspectiveNDC(const Camera& camera, f32 ndc_x, f32 ndc_y, f32 aspect) {
+            f32 tan_half_fov = tanf(camera.fov * 0.5f);
+            Vec3 forward = camera_forward(&camera);
+            Vec3 right = camera_right(&camera);
+            Vec3 up = vec3_cross(right, forward);
+            Vec3 dir = vec3_normalize(forward + right * (ndc_x * aspect * tan_half_fov) + up * (ndc_y * tan_half_fov));
+            return { camera.position, dir };
+        }
+
+        Ray RayFromOrthoNDC(const Camera& camera, f32 ndc_x, f32 ndc_y, f32 aspect, f32 ortho_size) {
+            Vec3 forward = camera_forward(&camera);
+            Vec3 right = camera_right(&camera);
+            Vec3 up = vec3_cross(right, forward);
+            f32 half_height = ortho_size;
+            f32 half_width = ortho_size * aspect;
+            Vec3 origin = camera.position + right * (ndc_x * half_width) + up * (ndc_y * half_height) + forward * camera.near_plane;
+            return { origin, forward };
+        }
+
+        bool ray_segment_distance(const Ray& ray, const Vec3& a, const Vec3& b, f32* out_distance, f32* out_ray_t, f32* out_seg_t);
         i32 pack_entity_id(SelectionType type, u32 index) {
             return ((i32)type << 24) | (i32)index;
         }
@@ -114,6 +135,35 @@ namespace brutal {
             return true;
         }
 
+        bool RayPlaneIntersect(const Ray& ray, const Plane& plane, f32* out_t, Vec3* out_point) {
+            return ray_plane_intersect(ray, plane, out_t, out_point);
+        }
+
+        bool RayRingHitTest(const Ray& ray, const Vec3& center, const Vec3& axis, f32 radius, f32 thickness, Vec3* out_hit) {
+            Plane plane = plane_from_point_normal(center, axis);
+            Vec3 hit;
+            if (!ray_plane_intersect(ray, plane, nullptr, &hit)) return false;
+            f32 dist = vec3_length(hit - center);
+            if (fabsf(dist - radius) > thickness) return false;
+            if (out_hit) *out_hit = hit;
+            return true;
+        }
+
+        bool RayAxisHandleHitTest(const Ray& ray, const Vec3& pivot, const Vec3& axis_dir, f32 length, f32 radius, f32* out_distance, f32* out_ray_t, f32* out_axis_t) {
+            Vec3 a = pivot;
+            Vec3 b = pivot + axis_dir * length;
+            f32 distance = 0.0f;
+            f32 ray_t = 0.0f;
+            f32 seg_t = 0.0f;
+            if (!ray_segment_distance(ray, a, b, &distance, &ray_t, &seg_t)) return false;
+            if (ray_t < 0.0f) return false;
+            if (distance > radius) return false;
+            if (out_distance) *out_distance = distance;
+            if (out_ray_t) *out_ray_t = ray_t;
+            if (out_axis_t) *out_axis_t = seg_t;
+            return true;
+        }
+
         bool ray_intersect_aabb(const Ray& ray, const AABB& aabb, f32* out_t) {
             f32 tmin = 0.0f;
             f32 tmax = 1e9f;
@@ -150,14 +200,10 @@ namespace brutal {
             f32 ndc_y = 1.0f - (2.0f * (f32)local_y / (f32)viewport.rect.h);
             f32 aspect = (f32)viewport.rect.w / (f32)viewport.rect.h;
             const Camera& camera = viewport.camera;
-            f32 tan_half_fov = tanf(camera.fov * 0.5f);
-
-            Vec3 forward = camera_forward(&camera);
-            Vec3 right = camera_right(&camera);
-            Vec3 up = vec3_cross(right, forward);
-
-            Vec3 dir = vec3_normalize(forward + right * (ndc_x * aspect * tan_half_fov) + up * (ndc_y * tan_half_fov));
-            return { camera.position, dir };
+            if (viewport.type == ViewportType::Perspective) {
+                return RayFromPerspectiveNDC(camera, ndc_x, ndc_y, aspect);
+            }
+            return RayFromOrthoNDC(camera, ndc_x, ndc_y, aspect, viewport.ortho_size);
         }
 
         bool ray_segment_distance(const Ray& ray, const Vec3& a, const Vec3& b, f32* out_distance, f32* out_ray_t, f32* out_seg_t) {
@@ -400,6 +446,7 @@ namespace brutal {
                 editor->gizmo_drag_entity_id = kInvalidEntityId;
                 editor->gizmo_drag_type = SelectionType::None;
                 editor->gizmo_drag_index = 0;
+                editor->gizmo_drag_uniform = false;
             }
             editor_cancel_inspector_edit(editor);
         }
@@ -421,6 +468,7 @@ namespace brutal {
             editor->gizmo_drag_entity_id = kInvalidEntityId;
             editor->gizmo_drag_type = SelectionType::None;
             editor->gizmo_drag_index = 0;
+            editor->gizmo_drag_uniform = false;
         }
 
         void editor_begin_inspector_edit(EditorState* editor, Scene* scene, i32 ui_id) {
@@ -475,7 +523,8 @@ namespace brutal {
         }
 
         void editor_select(EditorState* editor, SelectionType type, u32 index) {
-            editor_cancel_active_sessions(editor);            editor->selection_type = type;
+            editor_cancel_active_sessions(editor);
+            editor->selection_type = type;
             editor->selection_index = index;
             editor->selectedEntityId = pack_entity_id(type, index);
         }
@@ -488,22 +537,43 @@ namespace brutal {
             value->z = roundf(value->z / snap) * snap;
         }
 
-        Vec3 editor_gizmo_axis_dir(EditorState::GizmoAxis axis, const Camera& camera, bool local_space) {
+        Vec3 quat_rotate_vec3(const Quat& q, const Vec3& v) {
+            Vec3 qv(q.x, q.y, q.z);
+            Vec3 t = vec3_cross(qv, v) * 2.0f;
+            return v + t * q.w + vec3_cross(qv, t);
+        }
+
+        Quat quat_from_axis_angle(const Vec3& axis, f32 angle) {
+            Vec3 n = vec3_normalize(axis);
+            f32 half = angle * 0.5f;
+            f32 s = sinf(half);
+            return quat_normalize({ n.x * s, n.y * s, n.z * s, cosf(half) });
+        }
+
+        Vec3 editor_gizmo_axis_dir(EditorState::GizmoAxis axis, const Camera& camera, bool local_space, const Transform* transform) {
             (void)camera;
-            (void)local_space;
-            switch (axis) {
-            case EditorState::GizmoAxis::X: return Vec3(1.0f, 0.0f, 0.0f);
-            case EditorState::GizmoAxis::Y: return Vec3(0.0f, 1.0f, 0.0f);
-            case EditorState::GizmoAxis::Z: return Vec3(0.0f, 0.0f, 1.0f);
-            default: return Vec3(0.0f, 0.0f, 0.0f);
+            Vec3 dir = {};            switch (axis) {
+            case EditorState::GizmoAxis::X: dir = Vec3(1.0f, 0.0f, 0.0f); break;
+            case EditorState::GizmoAxis::Y: dir = Vec3(0.0f, 1.0f, 0.0f); break;
+            case EditorState::GizmoAxis::Z: dir = Vec3(0.0f, 0.0f, 1.0f); break;
+            case EditorState::GizmoAxis::Center: dir = Vec3(0.0f, 0.0f, 0.0f); break;
+            default: dir = Vec3(0.0f, 0.0f, 0.0f); break;
             }
+            if (local_space && transform) {
+                dir = quat_rotate_vec3(transform->rotation, dir);
+            }
+            return dir;
         }
 
         
 
-        f32 editor_gizmo_scale(const Camera& camera, const Vec3& pivot) {
-            f32 distance = vec3_length(pivot - camera.position);
-            f32 scale = distance * tanf(camera.fov * 0.5f) * kGizmoScreenFactor;
+        f32 editor_gizmo_scale(const Viewport& viewport, const Vec3& pivot) {
+            if (viewport.type != ViewportType::Perspective) {
+                f32 scale = viewport.ortho_size * 0.2f;
+                return std::max(scale, kGizmoMinScale);
+            }
+            f32 distance = vec3_length(pivot - viewport.camera.position);
+            f32 scale = distance * tanf(viewport.camera.fov * 0.5f) * kGizmoScreenFactor;
             return std::max(scale, kGizmoMinScale);
         }
 
@@ -916,15 +986,54 @@ namespace brutal {
             return true;
         }
 
-        Viewport editor_main_viewport(EditorState* editor, const PlatformState* platform) {
-            Viewport viewport = {};
-            viewport.id = kMainViewportId;
-            viewport.rect = { 0, 0, platform->window_width, platform->window_height };
-            viewport.camera = editor->camera;
-            viewport.type = ViewportType::Perspective;
-            viewport.isHovered = mouse_in_rect(&platform->input, viewport.rect.x, viewport.rect.y, viewport.rect.w, viewport.rect.h);
-            viewport.isActive = (editor->activeViewportId == viewport.id);
-            return viewport;
+        Rect editor_viewport_area(const PlatformState* platform) {
+            i32 left = kPanelPadding + kHierarchyWidth + kPanelPadding;
+            i32 right = platform->window_width - kInspectorWidth - kPanelPadding - kPanelPadding;
+            i32 top = kPanelPadding;
+            i32 bottom = platform->window_height - kAssetsHeight - kLineHeight * 2 - kPanelPadding;
+            i32 width = std::max(1, right - left);
+            i32 height = std::max(1, bottom - top);
+            return { left, top, width, height };
+        }
+
+        void editor_build_viewports(EditorState* editor, const PlatformState* platform, Viewport* out_viewports, i32* out_count) {
+            Rect area = editor_viewport_area(platform);
+            i32 half_w = std::max(1, area.w / 2);
+            i32 half_h = std::max(1, area.h / 2);
+
+            Viewport viewports[kEditorViewportCount] = {};
+
+            viewports[0].id = kViewportIdPerspective;
+            viewports[0].rect = { area.x, area.y, half_w, half_h };
+            viewports[0].camera = editor->camera;
+            viewports[0].type = ViewportType::Perspective;
+            viewports[0].ortho_size = 0.0f;
+
+            viewports[1].id = kViewportIdTop;
+            viewports[1].rect = { area.x + half_w, area.y, area.w - half_w, half_h };
+            viewports[1].camera = editor->ortho_top_camera;
+            viewports[1].type = ViewportType::OrthoTop;
+            viewports[1].ortho_size = editor->ortho_top_zoom;
+
+            viewports[2].id = kViewportIdFront;
+            viewports[2].rect = { area.x, area.y + half_h, half_w, area.h - half_h };
+            viewports[2].camera = editor->ortho_front_camera;
+            viewports[2].type = ViewportType::OrthoFront;
+            viewports[2].ortho_size = editor->ortho_front_zoom;
+
+            viewports[3].id = kViewportIdLeft;
+            viewports[3].rect = { area.x + half_w, area.y + half_h, area.w - half_w, area.h - half_h };
+            viewports[3].camera = editor->ortho_left_camera;
+            viewports[3].type = ViewportType::OrthoLeft;
+            viewports[3].ortho_size = editor->ortho_left_zoom;
+
+            for (i32 i = 0; i < kEditorViewportCount; ++i) {
+                Viewport& viewport = viewports[i];
+                viewport.isHovered = mouse_in_rect(&platform->input, viewport.rect.x, viewport.rect.y, viewport.rect.w, viewport.rect.h);
+                viewport.isActive = (editor->activeViewportId == viewport.id);
+                out_viewports[i] = viewport;
+            }
+            if (out_count) *out_count = kEditorViewportCount;
         }
 
         void editor_validate_selection(EditorState* editor, const Scene* scene) {
@@ -997,14 +1106,14 @@ namespace brutal {
             }
         }
 
-        EditorState::GizmoAxis editor_gizmo_pick_axis(const EditorState* editor, const Viewport& viewport, const InputState* input, const Vec3& pivot, f32 scale) {
+        EditorState::GizmoAxis editor_gizmo_pick_axis_translate(const EditorState* editor, const Viewport& viewport, const InputState* input, const Vec3& pivot, f32 scale, const Transform& transform) {
             Ray ray = build_ray_for_viewport(viewport, input->mouse.x, input->mouse.y);
             f32 hit_radius = scale * kGizmoHitFactor;
             f32 best_distance = 1e9f;
             EditorState::GizmoAxis best_axis = EditorState::GizmoAxis::None;
 
             for (EditorState::GizmoAxis axis : { EditorState::GizmoAxis::X, EditorState::GizmoAxis::Y, EditorState::GizmoAxis::Z }) {
-                Vec3 axis_dir = editor_gizmo_axis_dir(axis, viewport.camera, editor->gizmo_local_space);
+                Vec3 axis_dir = editor_gizmo_axis_dir(axis, viewport.camera, editor->gizmo_local_space, &transform);
                 Vec3 a = pivot;
                 Vec3 b = pivot + axis_dir * scale;
                 f32 distance = 0.0f;
@@ -1021,10 +1130,56 @@ namespace brutal {
             return best_axis;
         }
 
+        EditorState::GizmoAxis editor_gizmo_pick_axis_rotate(const EditorState* editor, const Viewport& viewport, const InputState* input, const Vec3& pivot, f32 scale, const Transform& transform) {
+            Ray ray = build_ray_for_viewport(viewport, input->mouse.x, input->mouse.y);
+            f32 thickness = scale * kGizmoHitFactor;
+            f32 best_distance = 1e9f;
+            EditorState::GizmoAxis best_axis = EditorState::GizmoAxis::None;
+
+            for (EditorState::GizmoAxis axis : { EditorState::GizmoAxis::X, EditorState::GizmoAxis::Y, EditorState::GizmoAxis::Z }) {
+                Vec3 axis_dir = editor_gizmo_axis_dir(axis, viewport.camera, editor->gizmo_local_space, &transform);
+                Vec3 hit;
+                if (!RayRingHitTest(ray, pivot, axis_dir, scale, thickness, &hit)) continue;
+                f32 dist = fabsf(vec3_length(hit - pivot) - scale);
+                if (dist < best_distance) {
+                    best_distance = dist;
+                    best_axis = axis;
+                }
+            }
+            return best_axis;
+        }
+
+        EditorState::GizmoAxis editor_gizmo_pick_axis_scale(const EditorState* editor, const Viewport& viewport, const InputState* input, const Vec3& pivot, f32 scale, const Transform& transform) {
+            Ray ray = build_ray_for_viewport(viewport, input->mouse.x, input->mouse.y);
+            f32 hit_radius = scale * kGizmoHitFactor;
+            f32 best_distance = 1e9f;
+            EditorState::GizmoAxis best_axis = EditorState::GizmoAxis::None;
+
+            Vec3 to_center = pivot - ray.origin;
+            f32 center_t = vec3_dot(to_center, ray.dir);
+            Vec3 closest = ray.origin + ray.dir * center_t;
+            f32 center_distance = vec3_length(closest - pivot);
+            if (center_t >= 0.0f && center_distance <= hit_radius) {
+                best_axis = EditorState::GizmoAxis::Center;
+                best_distance = center_distance;
+            }
+
+            for (EditorState::GizmoAxis axis : { EditorState::GizmoAxis::X, EditorState::GizmoAxis::Y, EditorState::GizmoAxis::Z }) {
+                Vec3 axis_dir = editor_gizmo_axis_dir(axis, viewport.camera, editor->gizmo_local_space, &transform);
+                f32 distance = 0.0f;
+                if (!RayAxisHandleHitTest(ray, pivot, axis_dir, scale, hit_radius, &distance, nullptr, nullptr)) continue;
+                if (distance < best_distance) {
+                    best_distance = distance;
+                    best_axis = axis;
+                }
+            }
+            return best_axis;
+        }
+
         bool editor_update_gizmo(EditorState* editor, Scene* scene, PlatformState* platform, const Viewport& viewport) {
 
             const InputState* input = &platform->input;
-            if (editor->gizmo_mode != EditorState::GizmoMode::Translate) {
+            if (editor->gizmo_mode == EditorState::GizmoMode::None) {
                 editor->gizmo_axis_hot = EditorState::GizmoAxis::None;
                 if (editor->gizmo_drag_active) editor_finalize_gizmo_drag(editor, scene, false);
                 return false;
@@ -1032,18 +1187,21 @@ namespace brutal {
 
             if (editor->selection_type == SelectionType::None) {
                 editor->gizmo_axis_hot = EditorState::GizmoAxis::None;
-                if (editor->gizmo_drag_active) editor_finalize_gizmo_drag(editor, scene, false);                return false;
+                if (editor->gizmo_drag_active) editor_finalize_gizmo_drag(editor, scene, false);
+                return false;
             }
 
             Transform transform;
             if (!editor_get_selected_transform(editor, scene, &transform)) {
                 editor->gizmo_axis_hot = EditorState::GizmoAxis::None;
-                if (editor->gizmo_drag_active) editor_finalize_gizmo_drag(editor, scene, false);                return false;
+                if (editor->gizmo_drag_active) editor_finalize_gizmo_drag(editor, scene, false);
+                return false;
             }
             Vec3 pivot = transform.position;
 
-            f32 scale = editor_gizmo_scale(viewport.camera, pivot);
+            f32 scale = editor_gizmo_scale(viewport, pivot);
             bool ui_capture = mouse_over_ui(platform);
+            bool shift_down = platform_key_down(input, KEY_SHIFT);
 
             if (editor->gizmo_drag_active) {
                 if (editor->selectedEntityId != editor->gizmo_drag_entity_id) {
@@ -1061,19 +1219,62 @@ namespace brutal {
                 Ray current_ray = build_ray_for_viewport(viewport, input->mouse.x, input->mouse.y);
                 Plane plane = plane_from_point_normal(editor->gizmo_drag_plane_point, editor->gizmo_drag_plane_normal);
                 Vec3 current_hit;
-                if (!ray_plane_intersect(current_ray, plane, nullptr, &current_hit)) {
+                if (!RayPlaneIntersect(current_ray, plane, nullptr, &current_hit)) {
                     return true;
                 }
 
-                Vec3 delta = current_hit - editor->gizmo_drag_start_hit;
-                f32 axis_delta = vec3_dot(delta, editor->gizmo_drag_axis);
-                if (editor->snap_enabled && editor->snap_value > 0.0001f) {
-                    axis_delta = roundf(axis_delta / editor->snap_value) * editor->snap_value;
+                if (editor->gizmo_mode == EditorState::GizmoMode::Translate) {
+                    Vec3 delta = current_hit - editor->gizmo_drag_start_hit;
+                    f32 axis_delta = vec3_dot(delta, editor->gizmo_drag_axis);
+                    if (editor->snap_enabled && editor->snap_value > 0.0001f) {
+                        axis_delta = roundf(axis_delta / editor->snap_value) * editor->snap_value;
+                    }
+                    Vec3 new_pos = editor->gizmo_drag_start_pos + editor->gizmo_drag_axis * axis_delta;
+                    Transform updated = editor->gizmo_drag_start_transform;
+                    updated.position = new_pos;
+                    editor_set_selected_transform(editor, scene, updated);
+                    return true;
                 }
-                Vec3 new_pos = editor->gizmo_drag_start_pos + editor->gizmo_drag_axis * axis_delta;
-                Transform updated = editor->gizmo_drag_start_transform;
-                updated.position = new_pos;
-                editor_set_selected_transform(editor, scene, updated);
+
+                if (editor->gizmo_mode == EditorState::GizmoMode::Rotate) {
+                    Vec3 current_vec = vec3_normalize(current_hit - pivot);
+                    Vec3 start_vec = editor->gizmo_drag_start_vector;
+                    Vec3 axis = editor->gizmo_drag_axis;
+                    f32 angle = atan2f(vec3_dot(axis, vec3_cross(start_vec, current_vec)), vec3_dot(start_vec, current_vec));
+                    f32 snap = editor->rotate_snap_value;
+                    if ((editor->rotate_snap_enabled || shift_down) && snap > 0.0001f) {
+                        angle = roundf(angle / degrees_to_radians(snap)) * degrees_to_radians(snap);
+                    }
+                    Quat delta_q = quat_from_axis_angle(axis, angle);
+                    Transform updated = editor->gizmo_drag_start_transform;
+                    updated.rotation = quat_multiply(delta_q, editor->gizmo_drag_start_transform.rotation);
+                    editor_set_selected_transform(editor, scene, updated);
+                    return true;
+                }
+
+                if (editor->gizmo_mode == EditorState::GizmoMode::Scale) {
+                    Vec3 delta = current_hit - editor->gizmo_drag_start_hit;
+                    f32 axis_delta = vec3_dot(delta, editor->gizmo_drag_axis);
+                    f32 factor = 1.0f + axis_delta / std::max(scale, 0.0001f);
+                    if (editor->scale_snap_enabled && editor->scale_snap_value > 0.0001f) {
+                        factor = roundf(factor / editor->scale_snap_value) * editor->scale_snap_value;
+                    }
+                    factor = std::max(factor, 0.01f);
+                    Transform updated = editor->gizmo_drag_start_transform;
+                    if (editor->gizmo_drag_uniform || editor->gizmo_axis_active == EditorState::GizmoAxis::Center) {
+                        updated.scale = editor->gizmo_drag_start_transform.scale * factor;
+                    }
+                    else {
+                        Vec3 new_scale = editor->gizmo_drag_start_transform.scale;
+                        if (editor->gizmo_axis_active == EditorState::GizmoAxis::X) new_scale.x *= factor;
+                        if (editor->gizmo_axis_active == EditorState::GizmoAxis::Y) new_scale.y *= factor;
+                        if (editor->gizmo_axis_active == EditorState::GizmoAxis::Z) new_scale.z *= factor;
+                        updated.scale = new_scale;
+                    }
+                    editor_set_selected_transform(editor, scene, updated);
+                    return true;
+                }
+                
                 return true;
             }
             if (!platform->input_focused || ui_capture || platform->mouse_captured) {
@@ -1086,7 +1287,15 @@ namespace brutal {
                 return false;
             }
 
-            editor->gizmo_axis_hot = editor_gizmo_pick_axis(editor, viewport, input, pivot, scale);
+            if (editor->gizmo_mode == EditorState::GizmoMode::Translate) {
+                editor->gizmo_axis_hot = editor_gizmo_pick_axis_translate(editor, viewport, input, pivot, scale, transform);
+            }
+            else if (editor->gizmo_mode == EditorState::GizmoMode::Rotate) {
+                editor->gizmo_axis_hot = editor_gizmo_pick_axis_rotate(editor, viewport, input, pivot, scale, transform);
+            }
+            else if (editor->gizmo_mode == EditorState::GizmoMode::Scale) {
+                editor->gizmo_axis_hot = editor_gizmo_pick_axis_scale(editor, viewport, input, pivot, scale, transform);
+            }
 
             if (input->mouse.left.pressed && editor->gizmo_axis_hot != EditorState::GizmoAxis::None && viewport.isHovered) {
                 editor->gizmo_drag_active = true;
@@ -1096,11 +1305,34 @@ namespace brutal {
                 editor->gizmo_drag_start_transform = transform;
                 editor->gizmo_drag_type = editor->selection_type;
                 editor->gizmo_drag_index = editor->selection_index;
-                editor->gizmo_drag_axis = editor_gizmo_axis_dir(editor->gizmo_axis_active, viewport.camera, editor->gizmo_local_space);
+                editor->gizmo_drag_uniform = (editor->gizmo_axis_hot == EditorState::GizmoAxis::Center);
 
                 Ray start_ray = build_ray_for_viewport(viewport, input->mouse.x, input->mouse.y);
                 Vec3 view_dir = start_ray.dir;
-                Vec3 axis_dir = editor->gizmo_drag_axis;
+                if (editor->gizmo_mode == EditorState::GizmoMode::Rotate) {
+                    editor->gizmo_drag_axis = vec3_normalize(editor_gizmo_axis_dir(editor->gizmo_axis_active, viewport.camera, editor->gizmo_local_space, &transform));
+                    editor->gizmo_drag_plane_normal = editor->gizmo_drag_axis;
+                    editor->gizmo_drag_plane_point = pivot;
+                    Plane plane = plane_from_point_normal(editor->gizmo_drag_plane_point, editor->gizmo_drag_plane_normal);
+                    Vec3 hit_point = pivot;
+                    if (!ray_plane_intersect(start_ray, plane, nullptr, &hit_point)) {
+                        editor_finalize_gizmo_drag(editor, scene, false);
+                        return false;
+                    }
+                    editor->gizmo_drag_start_hit = hit_point;
+                    if (editor->gizmo_mode == EditorState::GizmoMode::Scale && editor->gizmo_drag_uniform) {
+                        Vec3 cam_right = camera_right(&viewport.camera);
+                        Vec3 cam_up = vec3_cross(cam_right, camera_forward(&viewport.camera));
+                        editor->gizmo_drag_axis = vec3_normalize(cam_right + cam_up);
+                    }
+                    else {
+                        editor->gizmo_drag_axis = vec3_normalize(axis_dir);
+                    }
+                    editor->gizmo_drag_start_vector = vec3_normalize(hit_point - pivot);
+                    return true;
+                }
+
+                Vec3 axis_dir = editor_gizmo_axis_dir(editor->gizmo_axis_active, viewport.camera, editor->gizmo_local_space, &transform);
                 Vec3 normal = view_dir - axis_dir * vec3_dot(view_dir, axis_dir);
                 if (vec3_length(normal) < 1e-4f) {
                     Vec3 up = vec3_cross(camera_right(&viewport.camera), camera_forward(&viewport.camera));
@@ -1122,13 +1354,48 @@ namespace brutal {
             return false;
         }
 
-        void editor_draw_gizmo(const EditorState* editor, const Scene* scene, const Viewport& viewport) {
-            if (editor->gizmo_mode != EditorState::GizmoMode::Translate) return;
+        void editor_draw_circle(const Vec3& center, const Vec3& axis, f32 radius, const Vec3& color) {
+            Vec3 n = vec3_normalize(axis);
+            Vec3 ref = fabsf(n.y) < 0.9f ? Vec3(0.0f, 1.0f, 0.0f) : Vec3(1.0f, 0.0f, 0.0f);
+            Vec3 tangent = vec3_normalize(vec3_cross(n, ref));
+            Vec3 bitangent = vec3_cross(n, tangent);
+            const i32 segments = 48;
+            Vec3 prev = center + tangent * radius;
+            for (i32 i = 1; i <= segments; ++i) {
+                f32 angle = (f32)i / (f32)segments * 6.283185307f;
+                Vec3 next = center + (tangent * cosf(angle) + bitangent * sinf(angle)) * radius;
+                debug_line(prev, next, color);
+                prev = next;
+            }
+        }
+
+        void editor_draw_axis_handle(const Vec3& pivot, const Vec3& axis_dir, f32 length, f32 size, const Vec3& color) {
+            Vec3 dir = vec3_normalize(axis_dir);
+            Vec3 ref = fabsf(dir.y) < 0.9f ? Vec3(0.0f, 1.0f, 0.0f) : Vec3(1.0f, 0.0f, 0.0f);
+            Vec3 side = vec3_normalize(vec3_cross(dir, ref));
+            Vec3 up = vec3_cross(side, dir);
+            Vec3 end = pivot + dir * length;
+            Vec3 a = end + side * size + up * size;
+            Vec3 b = end + side * size - up * size;
+            Vec3 c = end - side * size - up * size;
+            Vec3 d = end - side * size + up * size;
+            debug_line(pivot, end, color);
+            debug_line(a, b, color);
+            debug_line(b, c, color);
+            debug_line(c, d, color);
+            debug_line(d, a, color);
+        }
+
+        void editor_draw_gizmo_internal(const EditorState* editor, const Scene* scene, const Viewport& viewport) {
+            if (editor->gizmo_mode == EditorState::GizmoMode::None) return;
             if (editor->selection_type == SelectionType::None) return;
 
-            Vec3 pivot = editor_get_selected_pivot(editor, scene);
+            Transform transform;
+            if (!editor_get_selected_transform(editor, scene, &transform)) return;
 
-            f32 scale = editor_gizmo_scale(viewport.camera, pivot);
+            Vec3 pivot = transform.position;
+
+            f32 scale = editor_gizmo_scale(viewport, pivot);
 
             auto axis_color = [&](EditorState::GizmoAxis axis, const Vec3& base) {
                 bool active = (editor->gizmo_axis_active == axis) || (editor->gizmo_drag_active && editor->gizmo_axis_active == axis);
@@ -1138,18 +1405,83 @@ namespace brutal {
                 return base;
                 };
 
-            Vec3 x_dir = editor_gizmo_axis_dir(EditorState::GizmoAxis::X, viewport.camera, editor->gizmo_local_space);
-            Vec3 y_dir = editor_gizmo_axis_dir(EditorState::GizmoAxis::Y, viewport.camera, editor->gizmo_local_space);
-            Vec3 z_dir = editor_gizmo_axis_dir(EditorState::GizmoAxis::Z, viewport.camera, editor->gizmo_local_space);
+            Vec3 x_dir = editor_gizmo_axis_dir(EditorState::GizmoAxis::X, viewport.camera, editor->gizmo_local_space, &transform);
+            Vec3 y_dir = editor_gizmo_axis_dir(EditorState::GizmoAxis::Y, viewport.camera, editor->gizmo_local_space, &transform);
+            Vec3 z_dir = editor_gizmo_axis_dir(EditorState::GizmoAxis::Z, viewport.camera, editor->gizmo_local_space, &transform);
 
-            debug_line(pivot, pivot + x_dir * scale, axis_color(EditorState::GizmoAxis::X, Vec3(0.9f, 0.1f, 0.1f)));
-            debug_line(pivot, pivot + y_dir * scale, axis_color(EditorState::GizmoAxis::Y, Vec3(0.1f, 0.9f, 0.1f)));
-            debug_line(pivot, pivot + z_dir * scale, axis_color(EditorState::GizmoAxis::Z, Vec3(0.2f, 0.3f, 0.9f)));
+            if (editor->gizmo_mode == EditorState::GizmoMode::Translate) {
+                debug_line(pivot, pivot + x_dir * scale, axis_color(EditorState::GizmoAxis::X, Vec3(0.9f, 0.1f, 0.1f)));
+                debug_line(pivot, pivot + y_dir * scale, axis_color(EditorState::GizmoAxis::Y, Vec3(0.1f, 0.9f, 0.1f)));
+                debug_line(pivot, pivot + z_dir * scale, axis_color(EditorState::GizmoAxis::Z, Vec3(0.2f, 0.3f, 0.9f)));
 
-            f32 tip = scale * 0.15f;
-            debug_line(pivot + x_dir * scale, pivot + x_dir * (scale - tip) + y_dir * tip * 0.3f, axis_color(EditorState::GizmoAxis::X, Vec3(0.9f, 0.1f, 0.1f)));
-            debug_line(pivot + y_dir * scale, pivot + y_dir * (scale - tip) + z_dir * tip * 0.3f, axis_color(EditorState::GizmoAxis::Y, Vec3(0.1f, 0.9f, 0.1f)));
-            debug_line(pivot + z_dir * scale, pivot + z_dir * (scale - tip) + x_dir * tip * 0.3f, axis_color(EditorState::GizmoAxis::Z, Vec3(0.2f, 0.3f, 0.9f)));
+                f32 tip = scale * 0.15f;
+                debug_line(pivot + x_dir * scale, pivot + x_dir * (scale - tip) + y_dir * tip * 0.3f, axis_color(EditorState::GizmoAxis::X, Vec3(0.9f, 0.1f, 0.1f)));
+                debug_line(pivot + y_dir * scale, pivot + y_dir * (scale - tip) + z_dir * tip * 0.3f, axis_color(EditorState::GizmoAxis::Y, Vec3(0.1f, 0.9f, 0.1f)));
+                debug_line(pivot + z_dir * scale, pivot + z_dir * (scale - tip) + x_dir * tip * 0.3f, axis_color(EditorState::GizmoAxis::Z, Vec3(0.2f, 0.3f, 0.9f)));
+            }
+            else if (editor->gizmo_mode == EditorState::GizmoMode::Rotate) {
+                editor_draw_circle(pivot, x_dir, scale, axis_color(EditorState::GizmoAxis::X, Vec3(0.9f, 0.1f, 0.1f)));
+                editor_draw_circle(pivot, y_dir, scale, axis_color(EditorState::GizmoAxis::Y, Vec3(0.1f, 0.9f, 0.1f)));
+                editor_draw_circle(pivot, z_dir, scale, axis_color(EditorState::GizmoAxis::Z, Vec3(0.2f, 0.3f, 0.9f)));
+            }
+            else if (editor->gizmo_mode == EditorState::GizmoMode::Scale) {
+                f32 handle = scale * 0.1f;
+                editor_draw_axis_handle(pivot, x_dir, scale, handle, axis_color(EditorState::GizmoAxis::X, Vec3(0.9f, 0.1f, 0.1f)));
+                editor_draw_axis_handle(pivot, y_dir, scale, handle, axis_color(EditorState::GizmoAxis::Y, Vec3(0.1f, 0.9f, 0.1f)));
+                editor_draw_axis_handle(pivot, z_dir, scale, handle, axis_color(EditorState::GizmoAxis::Z, Vec3(0.2f, 0.3f, 0.9f)));
+                Vec3 center_color = axis_color(EditorState::GizmoAxis::Center, Vec3(0.9f, 0.9f, 0.9f));
+                debug_wire_box(pivot, Vec3(handle * 1.5f, handle * 1.5f, handle * 1.5f), center_color);
+            }
+        }
+
+        void editor_draw_selection_bounds_internal(const EditorState* editor, const Scene* scene) {
+            if (editor->selection_type == SelectionType::Brush) {
+                const Brush& brush = scene->brushes[editor->selection_index];
+                AABB brush_aabb = brush_to_aabb(&brush);
+                debug_wire_box(aabb_center(brush_aabb), aabb_half_size(brush_aabb) * 2.0f, Vec3(1, 0.8f, 0.2f));
+            }
+            else if (editor->selection_type == SelectionType::Prop) {
+                const PropEntity& prop = scene->props[editor->selection_index];
+                debug_wire_box(prop.transform.position, prop.transform.scale, Vec3(0.3f, 1.0f, 0.5f));
+            }
+            else if (editor->selection_type == SelectionType::Light) {
+                const PointLight& light = scene->lights.point_lights[editor->selection_index];
+                debug_wire_box(light.position, Vec3(0.2f, 0.2f, 0.2f), Vec3(1.0f, 0.9f, 0.4f));
+            }
+        }
+
+        void editor_draw_grid_plane(const Vec3& origin, const Vec3& axis_a, const Vec3& axis_b, f32 extent, f32 spacing, i32 major_step) {
+            i32 count = (i32)std::ceil(extent / spacing);
+            for (i32 i = -count; i <= count; ++i) {
+                f32 offset = (f32)i * spacing;
+                Vec3 color = (i % major_step == 0) ? Vec3(0.4f, 0.4f, 0.45f) : Vec3(0.25f, 0.25f, 0.3f);
+                Vec3 a0 = origin + axis_a * (-extent) + axis_b * offset;
+                Vec3 a1 = origin + axis_a * extent + axis_b * offset;
+                Vec3 b0 = origin + axis_b * (-extent) + axis_a * offset;
+                Vec3 b1 = origin + axis_b * extent + axis_a * offset;
+                debug_line(a0, a1, color);
+                debug_line(b0, b1, color);
+            }
+        }
+
+        void editor_draw_ortho_grid_internal(const EditorState* editor, const Viewport& viewport) {
+            if (!editor->show_grid) return;
+            f32 extent = std::max(viewport.ortho_size * 1.2f, 1.0f);
+            f32 spacing = 1.0f;
+            if (extent > 20.0f) spacing = 2.0f;
+            if (extent > 50.0f) spacing = 5.0f;
+            if (extent > 100.0f) spacing = 10.0f;
+            i32 major_step = 5;
+            Vec3 origin(0.0f, 0.0f, 0.0f);
+            if (viewport.type == ViewportType::OrthoTop) {
+                editor_draw_grid_plane(origin, Vec3(1, 0, 0), Vec3(0, 0, 1), extent, spacing, major_step);
+            }
+            else if (viewport.type == ViewportType::OrthoFront) {
+                editor_draw_grid_plane(origin, Vec3(1, 0, 0), Vec3(0, 1, 0), extent, spacing, major_step);
+            }
+            else if (viewport.type == ViewportType::OrthoLeft) {
+                editor_draw_grid_plane(origin, Vec3(0, 0, 1), Vec3(0, 1, 0), extent, spacing, major_step);
+            }
         }
 
         void editor_draw_hierarchy(EditorState* editor, Scene* scene, PlatformState* platform) {
@@ -1292,8 +1624,10 @@ namespace brutal {
                 editor_set_selected_transform(editor, scene, transform);
             }
 
-            const char* mode = (editor->gizmo_mode == EditorState::GizmoMode::Translate)
-                ? "Translate (W)" : "None (Q)";
+            const char* mode = "None (Q)";
+            if (editor->gizmo_mode == EditorState::GizmoMode::Translate) mode = "Translate (W)";
+            else if (editor->gizmo_mode == EditorState::GizmoMode::Rotate) mode = "Rotate (E)";
+            else if (editor->gizmo_mode == EditorState::GizmoMode::Scale) mode = "Scale (R)";
             debug_text_printf(x, y, Vec3(0.7f, 0.9f, 0.7f), "Mode: %s", mode);
             y += kLineHeight;
 
@@ -1379,6 +1713,21 @@ namespace brutal {
         editor->active = false;
         camera_init(&editor->camera);
         editor->camera.position = Vec3(0, 2.0f, 6.0f);
+        camera_init(&editor->ortho_top_camera);
+        editor->ortho_top_camera.position = Vec3(0.0f, 10.0f, 0.0f);
+        editor->ortho_top_camera.pitch = -1.553f;
+        editor->ortho_top_camera.yaw = 0.0f;
+        camera_init(&editor->ortho_front_camera);
+        editor->ortho_front_camera.position = Vec3(0.0f, 2.0f, 10.0f);
+        editor->ortho_front_camera.pitch = 0.0f;
+        editor->ortho_front_camera.yaw = 0.0f;
+        camera_init(&editor->ortho_left_camera);
+        editor->ortho_left_camera.position = Vec3(10.0f, 2.0f, 0.0f);
+        editor->ortho_left_camera.pitch = 0.0f;
+        editor->ortho_left_camera.yaw = -1.570796327f;
+        editor->ortho_top_zoom = 10.0f;
+        editor->ortho_front_zoom = 10.0f;
+        editor->ortho_left_zoom = 10.0f;
         editor->move_speed = 6.0f;
         editor->look_sensitivity = 0.0025f;
         editor->selection_type = SelectionType::None;
@@ -1400,6 +1749,9 @@ namespace brutal {
         editor->gizmo_drag_plane_point = Vec3(0, 0, 0);
         editor->gizmo_drag_start_hit = Vec3(0, 0, 0);
         editor->gizmo_drag_axis = Vec3(1, 0, 0);
+        editor->gizmo_drag_start_vector = Vec3(1, 0, 0);
+        editor->gizmo_drag_start_axis_value = 0.0f;
+        editor->gizmo_drag_uniform = false;
         editor->gizmo_drag_start_transform = transform_default();
         editor->gizmo_drag_entity_id = kInvalidEntityId;
         editor->gizmo_drag_type = SelectionType::None;
@@ -1415,7 +1767,7 @@ namespace brutal {
         std::snprintf(editor->scene_path, sizeof(editor->scene_path), "scene.json");
         editor->rebuild_world = false;
         editor->rebuild_collision = false;
-        editor->activeViewportId = kMainViewportId;
+        editor->activeViewportId = kViewportIdPerspective;
         editor->ui_active_id = 0;
         editor->ui_hot_id = 0;
         editor->ui_last_mouse_x = 0;
@@ -1435,7 +1787,9 @@ namespace brutal {
     void editor_update(EditorState* editor, Scene* scene, PlatformState* platform, f32 dt) {
         const InputState* input = &platform->input;
         editor_validate_selection(editor, scene);
-        Viewport viewport = editor_main_viewport(editor, platform);
+        Viewport viewports[kEditorViewportCount] = {};
+        i32 viewport_count = 0;
+        editor_build_viewports(editor, platform, viewports, &viewport_count);
 
         if (platform_key_pressed(input, KEY_Q)) {
             editor->gizmo_mode = EditorState::GizmoMode::None;
@@ -1443,6 +1797,12 @@ namespace brutal {
         }
         if (platform_key_pressed(input, KEY_W)) {
             editor->gizmo_mode = EditorState::GizmoMode::Translate;
+        }
+        if (platform_key_pressed(input, KEY_E)) {
+            editor->gizmo_mode = EditorState::GizmoMode::Rotate;
+        }
+        if (platform_key_pressed(input, KEY_R)) {
+            editor->gizmo_mode = EditorState::GizmoMode::Scale;
         }
         if (platform_key_pressed(input, KEY_G)) {
             editor->snap_enabled = !editor->snap_enabled;
@@ -1495,21 +1855,48 @@ namespace brutal {
             }
         }
 
-        if (viewport.isActive && viewport.isHovered && input->mouse.right.pressed && !mouse_over_ui(platform)) {
-            platform_set_mouse_capture(platform, true);
+        if (input->mouse.left.pressed && !mouse_over_ui(platform)) {
+            for (i32 i = 0; i < viewport_count; ++i) {
+                if (viewports[i].isHovered) {
+                    editor->activeViewportId = viewports[i].id;
+                    break;
+                }
+            }
         }
-        if (input->mouse.right.released) {
+
+        Viewport* active_viewport = nullptr;
+        for (i32 i = 0; i < viewport_count; ++i) {
+            viewports[i].isActive = (viewports[i].id == editor->activeViewportId);
+            if (viewports[i].id == editor->activeViewportId) {
+                active_viewport = &viewports[i];
+            }
+        }
+        if (!active_viewport) {
+            editor->activeViewportId = kViewportIdPerspective;
+            active_viewport = &viewports[0];
+            for (i32 i = 0; i < viewport_count; ++i) {
+                viewports[i].isActive = (viewports[i].id == editor->activeViewportId);
+            }
+        }
+
+        bool ui_capture = mouse_over_ui(platform);
+        if (active_viewport->type != ViewportType::Perspective && platform->mouse_captured) {
             platform_set_mouse_capture(platform, false);
         }
 
-        if (viewport.isActive && platform->mouse_captured) {
-            f32 dyaw = (f32)input->mouse.delta_x * editor->look_sensitivity;
-            f32 dpitch = (f32)(-input->mouse.delta_y) * editor->look_sensitivity;
-            camera_rotate(&editor->camera, dyaw, dpitch);
-        }
+        if (active_viewport->type == ViewportType::Perspective) {
+            if (active_viewport->isHovered && input->mouse.right.pressed && !ui_capture) {
+                platform_set_mouse_capture(platform, true);
+            }
+            if (input->mouse.right.released) {
+                platform_set_mouse_capture(platform, false);
+            }
 
-        if (viewport.isActive) {
-            Vec3 forward = camera_forward(&editor->camera);
+            if (platform->mouse_captured) {
+                f32 dyaw = (f32)input->mouse.delta_x * editor->look_sensitivity;
+                f32 dpitch = (f32)(-input->mouse.delta_y) * editor->look_sensitivity;
+                camera_rotate(&editor->camera, dyaw, dpitch);
+            }            Vec3 forward = camera_forward(&editor->camera);
             Vec3 right = camera_right(&editor->camera);
             Vec3 movement(0, 0, 0);
             if (platform_key_down(input, KEY_W)) movement = movement + forward;
@@ -1523,26 +1910,55 @@ namespace brutal {
                 movement = vec3_normalize(movement);
                 editor->camera.position = editor->camera.position + movement * (editor->move_speed * dt);
             }
+            active_viewport->camera = editor->camera;
         }
 
-        viewport.camera = editor->camera;
-        if (input->mouse.left.pressed && viewport.isHovered && !mouse_over_ui(platform)) {
-            editor->activeViewportId = viewport.id;
-            viewport.isActive = true;
+        else {
+            Camera* ortho_camera = nullptr;
+            f32* ortho_zoom = nullptr;
+            if (active_viewport->type == ViewportType::OrthoTop) {
+                ortho_camera = &editor->ortho_top_camera;
+                ortho_zoom = &editor->ortho_top_zoom;
+            }
+            else if (active_viewport->type == ViewportType::OrthoFront) {
+                ortho_camera = &editor->ortho_front_camera;
+                ortho_zoom = &editor->ortho_front_zoom;
+            }
+            else if (active_viewport->type == ViewportType::OrthoLeft) {
+                ortho_camera = &editor->ortho_left_camera;
+                ortho_zoom = &editor->ortho_left_zoom;
+            }
+
+            if (ortho_camera && ortho_zoom) {
+                bool pan_active = (input->mouse.middle.down || input->mouse.right.down);
+                if (active_viewport->isHovered && pan_active && !ui_capture && platform->input_focused) {
+                    Vec3 right = camera_right(ortho_camera);
+                    Vec3 up = vec3_cross(right, camera_forward(ortho_camera));
+                    f32 pan_speed = std::max(*ortho_zoom * 0.002f, 0.001f);
+                    ortho_camera->position = ortho_camera->position - right * ((f32)input->mouse.delta_x * pan_speed);
+                    ortho_camera->position = ortho_camera->position + up * ((f32)input->mouse.delta_y * pan_speed);
+                }
+                if (active_viewport->isHovered && input->mouse.wheel_delta != 0) {
+                    f32 zoom_factor = powf(0.9f, (f32)input->mouse.wheel_delta);
+                    *ortho_zoom = clamp_f32((*ortho_zoom) * zoom_factor, 0.5f, 200.0f);
+                }
+                active_viewport->camera = *ortho_camera;
+                active_viewport->ortho_size = *ortho_zoom;
+            }
         }
 
-        if (!viewport.isActive && editor->gizmo_drag_active) {
+        if (editor->gizmo_drag_active && !platform->input_focused) {
             editor_finalize_gizmo_drag(editor, scene, false);
         }
 
         bool gizmo_consumed = false;
-        if (viewport.isActive) {
-            gizmo_consumed = editor_update_gizmo(editor, scene, platform, viewport);
+        if (active_viewport->isActive) {
+            gizmo_consumed = editor_update_gizmo(editor, scene, platform, *active_viewport);
         }
 
-        if (viewport.isActive && !platform->mouse_captured && input->mouse.left.pressed && viewport.isHovered && !mouse_over_ui(platform)) {
+        if (active_viewport->isActive && !platform->mouse_captured && input->mouse.left.pressed && active_viewport->isHovered && !ui_capture) {
             if (!gizmo_consumed) {
-                editor_update_selection(editor, scene, platform, viewport);
+                editor_update_selection(editor, scene, platform, *active_viewport);
             }
         }
     }
@@ -1558,32 +1974,35 @@ namespace brutal {
 
         debug_text_printf(kPanelPadding, platform->window_height - kAssetsHeight - kLineHeight * 3,
             Vec3(0.7f, 0.7f, 0.7f), "Viewport: %d  Selected: %d", editor->activeViewportId, editor->selectedEntityId);
-        const char* mode_text = editor->gizmo_mode == EditorState::GizmoMode::Translate ? "Translate" : "None";
+        const char* mode_text = "None";
+        if (editor->gizmo_mode == EditorState::GizmoMode::Translate) mode_text = "Translate";
+        else if (editor->gizmo_mode == EditorState::GizmoMode::Rotate) mode_text = "Rotate";
+        else if (editor->gizmo_mode == EditorState::GizmoMode::Scale) mode_text = "Scale";
         const char* axis_text = "None";
         if (editor->gizmo_axis_hot == EditorState::GizmoAxis::X) axis_text = "X";
         else if (editor->gizmo_axis_hot == EditorState::GizmoAxis::Y) axis_text = "Y";
         else if (editor->gizmo_axis_hot == EditorState::GizmoAxis::Z) axis_text = "Z";
+        else if (editor->gizmo_axis_hot == EditorState::GizmoAxis::Center) axis_text = "Center";
         debug_text_printf(kPanelPadding, platform->window_height - kAssetsHeight - kLineHeight * 2,
             Vec3(0.7f, 0.7f, 0.7f), "Gizmo: %s  AxisHot: %s  Drag: %s", mode_text, axis_text, editor->gizmo_drag_active ? "On" : "Off");
         debug_text_printf(kPanelPadding, platform->window_height - kAssetsHeight - kLineHeight,
             Vec3(0.7f, 0.7f, 0.7f), "Snap: %s  Step: %.2f", editor->snap_enabled ? "On" : "Off", editor->snap_value);
+    }
 
-        Viewport viewport = editor_main_viewport(editor, platform);
-        viewport.camera = editor->camera;
-        editor_draw_gizmo(editor, scene, viewport);
+    void editor_get_viewports(EditorState* editor, const PlatformState* platform, Viewport* out_viewports, i32* out_count) {
+        editor_build_viewports(editor, platform, out_viewports, out_count);
+    }
 
-        if (editor->selection_type == SelectionType::Brush) {
-            const Brush& brush = scene->brushes[editor->selection_index];
-            debug_wire_box(aabb_center(brush_to_aabb(&brush)), aabb_half_size(brush_to_aabb(&brush)) * 2.0f, Vec3(1, 0.8f, 0.2f));
-        }
-        else if (editor->selection_type == SelectionType::Prop) {
-            const PropEntity& prop = scene->props[editor->selection_index];
-            debug_wire_box(prop.transform.position, prop.transform.scale, Vec3(0.3f, 1.0f, 0.5f));
-        }
-        else if (editor->selection_type == SelectionType::Light) {
-            const PointLight& light = scene->lights.point_lights[editor->selection_index];
-            debug_wire_box(light.position, Vec3(0.2f, 0.2f, 0.2f), Vec3(1.0f, 0.9f, 0.4f));
-        }
+    void editor_draw_gizmo(const EditorState* editor, const Scene* scene, const Viewport& viewport) {
+        editor_draw_gizmo_internal(editor, scene, viewport);
+    }
+
+    void editor_draw_selection_bounds(const EditorState* editor, const Scene* scene) {
+        editor_draw_selection_bounds_internal(editor, scene);
+    }
+
+    void editor_draw_ortho_grid(const EditorState* editor, const Viewport& viewport) {
+        editor_draw_ortho_grid_internal(editor, viewport);
     }
 
     bool editor_scene_needs_rebuild(const EditorState* editor) {

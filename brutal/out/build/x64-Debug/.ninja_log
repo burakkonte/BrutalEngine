@@ -37,3 +37,14 @@
 626	711	7899930004519034	engine/brutal_engine.lib	4daa13bcbeba46c1
 122	836	7899929999477204	playground/CMakeFiles/playground.dir/src/editor.cpp.obj	1cb1b655890d73f2
 836	1140	7899930006608628	playground/playground.exe	ee10885f7a38a5b5
+129	582	7900090973739859	engine/CMakeFiles/brutal_engine.dir/private/renderer/camera.cpp.obj	4c63a3195ea4d28
+150	601	7900090973940841	engine/CMakeFiles/brutal_engine.dir/private/world/entity.cpp.obj	7238257a7aa729df
+118	604	7900090973629382	engine/CMakeFiles/brutal_engine.dir/private/renderer/shader.cpp.obj	feffaa756aab4e7e
+124	615	7900090973684761	engine/CMakeFiles/brutal_engine.dir/private/renderer/renderer.cpp.obj	70fddd64c0d3dc8d
+172	625	7900090974157165	engine/CMakeFiles/brutal_engine.dir/private/engine.cpp.obj	182df060a1fa828e
+159	637	7900090974031324	engine/CMakeFiles/brutal_engine.dir/private/world/scene.cpp.obj	1bffe273dd46f4d3
+140	648	7900090973845640	engine/CMakeFiles/brutal_engine.dir/private/renderer/debug_draw.cpp.obj	fc2c1238cd2f091
+195	660	7900090974398346	playground/CMakeFiles/playground.dir/src/debug_system.cpp.obj	50e7716e731ad0d2
+166	731	7900090974101986	engine/CMakeFiles/brutal_engine.dir/private/world/player.cpp.obj	588df1e6a4cdc84d
+181	754	7900090974252626	engine/CMakeFiles/brutal_engine.dir/private/world/flashlight.cpp.obj	ffa22d2bc412e98a
+109	913	7900090973529736	engine/CMakeFiles/brutal_engine.dir/private/core/platform_win32.cpp.obj	59d74a3683e34f36

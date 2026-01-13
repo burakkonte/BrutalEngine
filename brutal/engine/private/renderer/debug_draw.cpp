@@ -328,5 +328,20 @@ void debug_lines_flush(const Camera* camera, i32 screen_w, i32 screen_h) {
     glEnable(GL_DEPTH_TEST);
     g_line_count = 0;
 }
+void debug_lines_flush_matrix(const Mat4& view, const Mat4& projection) {
+    if (g_line_count == 0) return;
+    glDisable(GL_DEPTH_TEST);
+    glLineWidth(1.0f);
+    glBindBuffer(GL_ARRAY_BUFFER, g_line_vbo);
+    glBufferSubData(GL_ARRAY_BUFFER, 0, g_line_count * sizeof(LineVert), g_line_verts);
+    shader_bind(&g_line_shader);
+    Mat4 vp = mat4_multiply(projection, view);
+    if (g_line_loc_viewproj >= 0) glUniformMatrix4fv(g_line_loc_viewproj, 1, GL_FALSE, vp.m);
+    glBindVertexArray(g_line_vao);
+    glDrawArrays(GL_LINES, 0, g_line_count);
+    glBindVertexArray(0);
+    glEnable(GL_DEPTH_TEST);
+    g_line_count = 0;
+}
 
 }

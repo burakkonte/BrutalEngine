@@ -327,49 +327,103 @@ int main() {
         // Render
         PROFILE_SCOPE("Render");
         renderer_begin_frame(&renderer, platform.window_width, platform.window_height);
-        renderer_set_camera(&renderer, editor.active ? &editor.camera : &player.camera);
+
         renderer_set_lights(&renderer, &scene.lights);
         
-        // Draw world geometry
-        if (scene.world_mesh.vao) {
-            renderer_draw_mesh(&renderer, &scene.world_mesh, Mat4::identity(), Vec3(1, 1, 1));
-        }
-
-        // Draw props
-        for (u32 i = 0; i < scene.prop_count; ++i) {
-            const PropEntity& prop = scene.props[i];
-            if (!prop.active) continue;
-            Mat4 model = transform_to_matrix(&prop.transform);
-            renderer_draw_mesh(&renderer, renderer_get_cube_mesh(&renderer), model, prop.color);
-        }
-
-        if (editor.active && editor.selection_type != SelectionType::None) {
-            const Vec3 outline_color(1.0f, 0.85f, 0.2f);
-            const f32 outline_scale = 1.02f;
-            if (editor.selection_type == SelectionType::Prop) {
-                const PropEntity& prop = scene.props[editor.selection_index];
-                if (prop.active) {
-                    Mat4 model = transform_to_matrix(&prop.transform);
-                    renderer_draw_mesh_outline(&renderer, renderer_get_cube_mesh(&renderer), model, outline_color, outline_scale);
+        if (editor.active) {
+            Viewport viewports[kEditorViewportCount] = {};
+            i32 viewport_count = 0;
+            editor_get_viewports(&editor, &platform, viewports, &viewport_count);
+            glEnable(GL_SCISSOR_TEST);
+            Viewport active_viewport = viewports[0];
+            for (i32 i = 0; i < viewport_count; ++i) {
+                const Viewport& viewport = viewports[i];
+                if (viewport.isActive) {
+                    active_viewport = viewport;
                 }
-            }
-            else if (editor.selection_type == SelectionType::Brush) {
-                const Brush& brush = scene.brushes[editor.selection_index];
-                AABB brush_aabb = brush_to_aabb(&brush);
-                Vec3 center = aabb_center(brush_aabb);
-                Vec3 size = aabb_half_size(brush_aabb) * 2.0f;
-                Mat4 model = mat4_multiply(mat4_translation(center), mat4_scale(size));
-                renderer_draw_mesh_outline(&renderer, renderer_get_cube_mesh(&renderer), model, outline_color, outline_scale);
-            }
-            else if (editor.selection_type == SelectionType::Light) {
-                const PointLight& light = scene.lights.point_lights[editor.selection_index];
-                Mat4 model = mat4_multiply(mat4_translation(light.position), mat4_scale(Vec3(0.2f, 0.2f, 0.2f)));
-                renderer_draw_mesh_outline(&renderer, renderer_get_cube_mesh(&renderer), model, Vec3(1.0f, 0.9f, 0.4f), outline_scale);
-            }
-        }
+                glViewport(viewport.rect.x, viewport.rect.y, viewport.rect.w, viewport.rect.h);
+                glScissor(viewport.rect.x, viewport.rect.y, viewport.rect.w, viewport.rect.h);
+                glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-        if (editor.active && editor.show_grid) {
-            renderer_draw_grid(&renderer);
+                f32 aspect = (f32)viewport.rect.w / (f32)viewport.rect.h;
+                Mat4 view = camera_view_matrix(&viewport.camera);
+                Mat4 proj = Mat4::identity();
+                if (viewport.type == ViewportType::Perspective) {
+                    proj = camera_projection_matrix(&viewport.camera, aspect);
+                }
+                else {
+                    f32 half_h = viewport.ortho_size;
+                    f32 half_w = viewport.ortho_size * aspect;
+                    proj = mat4_ortho(-half_w, half_w, -half_h, half_h, viewport.camera.near_plane, viewport.camera.far_plane);
+                }
+                renderer_set_camera_matrices(&renderer, view, proj, viewport.camera.position);
+
+                if (scene.world_mesh.vao) {
+                    renderer_draw_mesh(&renderer, &scene.world_mesh, Mat4::identity(), Vec3(1, 1, 1));
+                }
+
+                for (u32 p = 0; p < scene.prop_count; ++p) {
+                    const PropEntity& prop = scene.props[p];
+                    if (!prop.active) continue;
+                    Mat4 model = transform_to_matrix(&prop.transform);
+                    renderer_draw_mesh(&renderer, renderer_get_cube_mesh(&renderer), model, prop.color);
+                }
+                if (editor.selection_type != SelectionType::None) {
+                    const Vec3 outline_color(1.0f, 0.85f, 0.2f);
+                    const f32 outline_scale = 1.02f;
+                    if (editor.selection_type == SelectionType::Prop) {
+                        const PropEntity& prop = scene.props[editor.selection_index];
+                        if (prop.active) {
+                            Mat4 model = transform_to_matrix(&prop.transform);
+                            renderer_draw_mesh_outline(&renderer, renderer_get_cube_mesh(&renderer), model, outline_color, outline_scale);
+                        }
+                    }
+                    else if (editor.selection_type == SelectionType::Brush) {
+                        const Brush& brush = scene.brushes[editor.selection_index];
+                        AABB brush_aabb = brush_to_aabb(&brush);
+                        Vec3 center = aabb_center(brush_aabb);
+                        Vec3 size = aabb_half_size(brush_aabb) * 2.0f;
+                        Mat4 model = mat4_multiply(mat4_translation(center), mat4_scale(size));
+                        renderer_draw_mesh_outline(&renderer, renderer_get_cube_mesh(&renderer), model, outline_color, outline_scale);
+                    }
+                    else if (editor.selection_type == SelectionType::Light) {
+                        const PointLight& light = scene.lights.point_lights[editor.selection_index];
+                        Mat4 model = mat4_multiply(mat4_translation(light.position), mat4_scale(Vec3(0.2f, 0.2f, 0.2f)));
+                        renderer_draw_mesh_outline(&renderer, renderer_get_cube_mesh(&renderer), model, Vec3(1.0f, 0.9f, 0.4f), outline_scale);
+                    }
+                }
+
+                if (viewport.type == ViewportType::Perspective) {
+                    if (editor.show_grid) {
+                        renderer_draw_grid(&renderer);
+                    }
+                }
+                else {
+                    editor_draw_ortho_grid(&editor, viewport);
+                }
+
+                if (viewport.isActive && editor.selection_type != SelectionType::None) {
+                    editor_draw_gizmo(&editor, &scene, viewport);
+                }
+
+                editor_draw_selection_bounds(&editor, &scene);
+                debug_lines_flush_matrix(view, proj);
+            }
+            glDisable(GL_SCISSOR_TEST);
+            glViewport(0, 0, platform.window_width, platform.window_height);
+        }
+        else {
+            renderer_set_camera(&renderer, &player.camera);
+            if (scene.world_mesh.vao) {
+                renderer_draw_mesh(&renderer, &scene.world_mesh, Mat4::identity(), Vec3(1, 1, 1));
+            }
+
+            for (u32 i = 0; i < scene.prop_count; ++i) {
+                const PropEntity& prop = scene.props[i];
+                if (!prop.active) continue;
+                Mat4 model = transform_to_matrix(&prop.transform);
+                renderer_draw_mesh(&renderer, renderer_get_cube_mesh(&renderer), model, prop.color);
+            }
         }
         
         DebugFrameInfo frame_info = {};
@@ -382,10 +436,34 @@ int main() {
             editor_draw_ui(&editor, &scene, &platform);
         }
         if (debug_system_show_collision(&debug_system)) {
-            debug_lines_flush(editor.active ? &editor.camera : &player.camera, platform.window_width, platform.window_height);
-        }
-        else if (editor.active) {
-            debug_lines_flush(&editor.camera, platform.window_width, platform.window_height);
+            if (editor.active) {
+                Viewport viewports[kEditorViewportCount] = {};
+                i32 viewport_count = 0;
+                editor_get_viewports(&editor, &platform, viewports, &viewport_count);
+                Viewport active_viewport = viewports[0];
+                for (i32 i = 0; i < viewport_count; ++i) {
+                    if (viewports[i].isActive) {
+                        active_viewport = viewports[i];
+                        break;
+                    }
+                }
+                glEnable(GL_SCISSOR_TEST);
+                glViewport(active_viewport.rect.x, active_viewport.rect.y, active_viewport.rect.w, active_viewport.rect.h);
+                glScissor(active_viewport.rect.x, active_viewport.rect.y, active_viewport.rect.w, active_viewport.rect.h);
+                f32 aspect = (f32)active_viewport.rect.w / (f32)active_viewport.rect.h;
+                Mat4 view = camera_view_matrix(&active_viewport.camera);
+                Mat4 proj = (active_viewport.type == ViewportType::Perspective)
+                    ? camera_projection_matrix(&active_viewport.camera, aspect)
+                    : mat4_ortho(-active_viewport.ortho_size * aspect, active_viewport.ortho_size * aspect,
+                        -active_viewport.ortho_size, active_viewport.ortho_size,
+                        active_viewport.camera.near_plane, active_viewport.camera.far_plane);
+                debug_lines_flush_matrix(view, proj);
+                glDisable(GL_SCISSOR_TEST);
+                glViewport(0, 0, platform.window_width, platform.window_height);
+            }
+            else {
+                debug_lines_flush(&player.camera, platform.window_width, platform.window_height);
+            }
         }
 
         debug_text_flush(platform.window_width, platform.window_height);

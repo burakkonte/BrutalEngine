@@ -42,6 +42,7 @@ void renderer_shutdown(RendererState* s);
 void renderer_begin_frame(RendererState* s, i32 w, i32 h);
 void renderer_end_frame();
 void renderer_set_camera(RendererState* s, const Camera* c);
+void renderer_set_camera_matrices(RendererState* s, const Mat4& view, const Mat4& projection, const Vec3& camera_pos);
 void renderer_set_lights(RendererState* s, const LightEnvironment* l);
 void renderer_draw_mesh(RendererState* s, const Mesh* m, const Mat4& model, const Vec3& color);
 void renderer_draw_mesh_outline(RendererState* s, const Mesh* m, const Mat4& model, const Vec3& color, f32 scale);

@@ -91,6 +91,17 @@ inline Mat4 mat4_perspective(f32 fov, f32 aspect, f32 near, f32 far) {
     return r;
 }
 
+inline Mat4 mat4_ortho(f32 left, f32 right, f32 bottom, f32 top, f32 near, f32 far) {
+    Mat4 r = Mat4::identity();
+    r.m[0] = 2.0f / (right - left);
+    r.m[5] = 2.0f / (top - bottom);
+    r.m[10] = -2.0f / (far - near);
+    r.m[12] = -(right + left) / (right - left);
+    r.m[13] = -(top + bottom) / (top - bottom);
+    r.m[14] = -(far + near) / (far - near);
+    return r;
+}
+
 inline Mat4 operator*(const Mat4& a, const Mat4& b) {
     return mat4_multiply(a, b);
 }

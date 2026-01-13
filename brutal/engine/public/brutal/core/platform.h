@@ -33,6 +33,7 @@ struct MouseState {
     i32 delta_x, delta_y;
     i32 raw_dx, raw_dy;
     ButtonState left, right, middle;
+    i32 wheel_delta;
 };
 
 struct KeyState {

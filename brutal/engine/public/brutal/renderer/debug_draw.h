@@ -21,6 +21,7 @@ void debug_line(const Vec3& a, const Vec3& b, const Vec3& color);
 void debug_box(const AABB& box, const Vec3& color);
 void debug_wire_box(const Vec3& center, const Vec3& size, const Vec3& color);
 void debug_lines_flush(const Camera* camera, i32 screen_w, i32 screen_h);
+void debug_lines_flush_matrix(const Mat4& view, const Mat4& projection);
 
 }
 

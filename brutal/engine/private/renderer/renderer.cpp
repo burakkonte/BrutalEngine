@@ -197,6 +197,13 @@ void renderer_set_camera(RendererState* s, const Camera* c) {
     s->camera_pos = c->position;
 }
 
+void renderer_set_camera_matrices(RendererState* s, const Mat4& view, const Mat4& projection, const Vec3& camera_pos) {
+    s->view = view;
+    s->projection = projection;
+    s->view_projection = mat4_multiply(s->projection, s->view);
+    s->camera_pos = camera_pos;
+}
+
 void renderer_set_lights(RendererState* s, const LightEnvironment* l) {
     s->lights = l;
 }

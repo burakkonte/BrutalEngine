@@ -20,7 +20,10 @@ namespace brutal {
     };
 
     enum class ViewportType {
-        Perspective
+        Perspective,
+        OrthoTop,
+        OrthoFront,
+        OrthoLeft
     };
 
     struct Viewport {
@@ -30,7 +33,13 @@ namespace brutal {
         ViewportType type;
         bool isHovered;
         bool isActive;
+        f32 ortho_size;
     };
+    constexpr i32 kEditorViewportCount = 4;
+    constexpr i32 kViewportIdPerspective = 0;
+    constexpr i32 kViewportIdTop = 1;
+    constexpr i32 kViewportIdFront = 2;
+    constexpr i32 kViewportIdLeft = 3;
     enum class SelectionType {
         None,
         Brush,
@@ -47,6 +56,12 @@ namespace brutal {
     struct EditorState {
         bool active;
         Camera camera;
+        Camera ortho_top_camera;
+        Camera ortho_front_camera;
+        Camera ortho_left_camera;
+        f32 ortho_top_zoom;
+        f32 ortho_front_zoom;
+        f32 ortho_left_zoom;
         f32 move_speed;
         f32 look_sensitivity;
 
@@ -76,7 +91,8 @@ namespace brutal {
             None,
             X,
             Y,
-            Z
+            Z,
+            Center
         };
 
         GizmoAxis gizmo_axis_hot;
@@ -87,6 +103,9 @@ namespace brutal {
         Vec3 gizmo_drag_plane_point;
         Vec3 gizmo_drag_start_hit;
         Vec3 gizmo_drag_axis;
+        Vec3 gizmo_drag_start_vector;
+        f32 gizmo_drag_start_axis_value;
+        bool gizmo_drag_uniform;
         Transform gizmo_drag_start_transform;
         i32 gizmo_drag_entity_id;
         SelectionType gizmo_drag_type;
@@ -116,6 +135,10 @@ namespace brutal {
     void editor_set_active(EditorState* editor, bool active, PlatformState* platform, Player* player);
     void editor_update(EditorState* editor, Scene* scene, PlatformState* platform, f32 dt);
     void editor_draw_ui(EditorState* editor, Scene* scene, PlatformState* platform);
+    void editor_get_viewports(EditorState* editor, const PlatformState* platform, Viewport* out_viewports, i32* out_count);
+    void editor_draw_gizmo(const EditorState* editor, const Scene* scene, const Viewport& viewport);
+    void editor_draw_selection_bounds(const EditorState* editor, const Scene* scene);
+    void editor_draw_ortho_grid(const EditorState* editor, const Viewport& viewport);
     bool editor_scene_needs_rebuild(const EditorState* editor);
     void editor_clear_rebuild_flag(EditorState* editor);
 
