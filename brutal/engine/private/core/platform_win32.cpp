@@ -375,7 +375,9 @@ namespace brutal {
         frame.input_focused = state->input_focused;
 
         frame.dt_spike = dt > kDtSpikeThreshold;
-        frame.dx_spike = (std::max(std::abs(raw_dx), std::abs(raw_dy)) > kDxSpikeThreshold);
+        i32 abs_dx = raw_dx < 0 ? -raw_dx : raw_dx;
+        i32 abs_dy = raw_dy < 0 ? -raw_dy : raw_dy;
+        frame.dx_spike = (std::max(abs_dx, abs_dy) > kDxSpikeThreshold);
 
         telemetry.index = (telemetry.index + 1) % MouseLookTelemetry::kRingSize;
 

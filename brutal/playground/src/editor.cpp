@@ -44,7 +44,8 @@ namespace brutal {
             const f32* bmax = &aabb.max.x;
 
             for (int i = 0; i < 3; ++i) {
-                if (std::abs(dir[i]) < 1e-6f) {
+                f32 dir_abs = dir[i] < 0.0f ? -dir[i] : dir[i];
+                if (dir_abs < 1e-6f) {
                     if (origin[i] < bmin[i] || origin[i] > bmax[i]) return false;
                 }
                 else {
