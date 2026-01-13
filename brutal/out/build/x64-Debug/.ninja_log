@@ -48,3 +48,5 @@
 166	731	7900090974101986	engine/CMakeFiles/brutal_engine.dir/private/world/player.cpp.obj	588df1e6a4cdc84d
 181	754	7900090974252626	engine/CMakeFiles/brutal_engine.dir/private/world/flashlight.cpp.obj	ffa22d2bc412e98a
 109	913	7900090973529736	engine/CMakeFiles/brutal_engine.dir/private/core/platform_win32.cpp.obj	59d74a3683e34f36
+59	190	7900093054243968	engine/brutal_engine.lib	4daa13bcbeba46c1
+14	413	7900096558145316	playground/CMakeFiles/playground.dir/src/editor.cpp.obj	1cb1b655890d73f2

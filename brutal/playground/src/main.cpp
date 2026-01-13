@@ -15,6 +15,7 @@
 #include "brutal/world/player.h"
 #include "debug_system.h"
 #include "editor.h"
+#include <glad/glad.h>
 #include <cstdio>
 
 using namespace brutal;
@@ -335,12 +336,10 @@ int main() {
             i32 viewport_count = 0;
             editor_get_viewports(&editor, &platform, viewports, &viewport_count);
             glEnable(GL_SCISSOR_TEST);
-            Viewport active_viewport = viewports[0];
+
             for (i32 i = 0; i < viewport_count; ++i) {
                 const Viewport& viewport = viewports[i];
-                if (viewport.isActive) {
-                    active_viewport = viewport;
-                }
+                
                 glViewport(viewport.rect.x, viewport.rect.y, viewport.rect.w, viewport.rect.h);
                 glScissor(viewport.rect.x, viewport.rect.y, viewport.rect.w, viewport.rect.h);
                 glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);

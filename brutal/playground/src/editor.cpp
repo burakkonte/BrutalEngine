@@ -1309,6 +1309,7 @@ namespace brutal {
 
                 Ray start_ray = build_ray_for_viewport(viewport, input->mouse.x, input->mouse.y);
                 Vec3 view_dir = start_ray.dir;
+                Vec3 axis_dir = editor_gizmo_axis_dir(editor->gizmo_axis_active, viewport.camera, editor->gizmo_local_space, &transform);
                 if (editor->gizmo_mode == EditorState::GizmoMode::Rotate) {
                     editor->gizmo_drag_axis = vec3_normalize(editor_gizmo_axis_dir(editor->gizmo_axis_active, viewport.camera, editor->gizmo_local_space, &transform));
                     editor->gizmo_drag_plane_normal = editor->gizmo_drag_axis;
@@ -1332,7 +1333,7 @@ namespace brutal {
                     return true;
                 }
 
-                Vec3 axis_dir = editor_gizmo_axis_dir(editor->gizmo_axis_active, viewport.camera, editor->gizmo_local_space, &transform);
+
                 Vec3 normal = view_dir - axis_dir * vec3_dot(view_dir, axis_dir);
                 if (vec3_length(normal) < 1e-4f) {
                     Vec3 up = vec3_cross(camera_right(&viewport.camera), camera_forward(&viewport.camera));
