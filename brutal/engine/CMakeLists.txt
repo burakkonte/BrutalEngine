@@ -17,11 +17,17 @@ set(ENGINE_SOURCES
     private/world/collision.cpp
     private/world/scene.cpp
     private/world/player.cpp
-    private/world/flashlight.cpp
     private/engine.cpp
 )
 
-add_library(brutal_engine STATIC ${ENGINE_SOURCES})
+set(FLASHLIGHT_SRC private/world/flashlight.cpp)
+if (EXISTS "${CMAKE_CURRENT_LIST_DIR}/${FLASHLIGHT_SRC}")
+    list(APPEND ENGINE_SOURCES ${FLASHLIGHT_SRC})
+endif()
+
+if (NOT TARGET brutal_engine)
+    add_library(brutal_engine STATIC ${ENGINE_SOURCES})
+endif()
 
 target_include_directories(brutal_engine
     PUBLIC public

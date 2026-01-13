@@ -339,6 +339,15 @@ build engine\CMakeFiles\brutal_engine.dir\private\engine.cpp.obj: CXX_COMPILER__
   TARGET_COMPILE_PDB = engine\CMakeFiles\brutal_engine.dir\brutal_engine.pdb
   TARGET_PDB = engine\brutal_engine.pdb
 
+build engine\CMakeFiles\brutal_engine.dir\private\world\flashlight.cpp.obj: CXX_COMPILER__brutal_engine_unscanned_Debug C$:\Users\su-ko\Downloads\brutal_engine\brutal\engine\private\world\flashlight.cpp || cmake_object_order_depends_target_brutal_engine
+  DEFINES = -DBRUTAL_ENABLE_PROFILER=1
+  FLAGS = /DWIN32 /D_WINDOWS /EHsc /Zi /Ob0 /Od /RTC1 -MDd
+  INCLUDES = -IC:\Users\su-ko\Downloads\brutal_engine\brutal\engine\public -IC:\Users\su-ko\Downloads\brutal_engine\brutal\engine\private -IC:\Users\su-ko\Downloads\brutal_engine\brutal\third_party\glad\include
+  OBJECT_DIR = engine\CMakeFiles\brutal_engine.dir
+  OBJECT_FILE_DIR = engine\CMakeFiles\brutal_engine.dir\private\world
+  TARGET_COMPILE_PDB = engine\CMakeFiles\brutal_engine.dir\brutal_engine.pdb
+  TARGET_PDB = engine\brutal_engine.pdb
+
 
 # =============================================================================
 # Link build statements for STATIC_LIBRARY target brutal_engine
@@ -347,7 +356,7 @@ build engine\CMakeFiles\brutal_engine.dir\private\engine.cpp.obj: CXX_COMPILER__
 #############################################
 # Link the static library engine\brutal_engine.lib
 
-build engine\brutal_engine.lib: CXX_STATIC_LIBRARY_LINKER__brutal_engine_Debug engine\CMakeFiles\brutal_engine.dir\private\core\logging.cpp.obj engine\CMakeFiles\brutal_engine.dir\private\core\memory.cpp.obj engine\CMakeFiles\brutal_engine.dir\private\core\profiler.cpp.obj engine\CMakeFiles\brutal_engine.dir\private\core\time.cpp.obj engine\CMakeFiles\brutal_engine.dir\private\core\platform_win32.cpp.obj engine\CMakeFiles\brutal_engine.dir\private\math\geometry.cpp.obj engine\CMakeFiles\brutal_engine.dir\private\renderer\gl_context.cpp.obj engine\CMakeFiles\brutal_engine.dir\private\renderer\shader.cpp.obj engine\CMakeFiles\brutal_engine.dir\private\renderer\mesh.cpp.obj engine\CMakeFiles\brutal_engine.dir\private\renderer\renderer.cpp.obj engine\CMakeFiles\brutal_engine.dir\private\renderer\camera.cpp.obj engine\CMakeFiles\brutal_engine.dir\private\renderer\light.cpp.obj engine\CMakeFiles\brutal_engine.dir\private\renderer\debug_draw.cpp.obj engine\CMakeFiles\brutal_engine.dir\private\world\brush.cpp.obj engine\CMakeFiles\brutal_engine.dir\private\world\entity.cpp.obj engine\CMakeFiles\brutal_engine.dir\private\world\collision.cpp.obj engine\CMakeFiles\brutal_engine.dir\private\world\scene.cpp.obj engine\CMakeFiles\brutal_engine.dir\private\world\player.cpp.obj engine\CMakeFiles\brutal_engine.dir\private\engine.cpp.obj || third_party\glad\glad.lib
+build engine\brutal_engine.lib: CXX_STATIC_LIBRARY_LINKER__brutal_engine_Debug engine\CMakeFiles\brutal_engine.dir\private\core\logging.cpp.obj engine\CMakeFiles\brutal_engine.dir\private\core\memory.cpp.obj engine\CMakeFiles\brutal_engine.dir\private\core\profiler.cpp.obj engine\CMakeFiles\brutal_engine.dir\private\core\time.cpp.obj engine\CMakeFiles\brutal_engine.dir\private\core\platform_win32.cpp.obj engine\CMakeFiles\brutal_engine.dir\private\math\geometry.cpp.obj engine\CMakeFiles\brutal_engine.dir\private\renderer\gl_context.cpp.obj engine\CMakeFiles\brutal_engine.dir\private\renderer\shader.cpp.obj engine\CMakeFiles\brutal_engine.dir\private\renderer\mesh.cpp.obj engine\CMakeFiles\brutal_engine.dir\private\renderer\renderer.cpp.obj engine\CMakeFiles\brutal_engine.dir\private\renderer\camera.cpp.obj engine\CMakeFiles\brutal_engine.dir\private\renderer\light.cpp.obj engine\CMakeFiles\brutal_engine.dir\private\renderer\debug_draw.cpp.obj engine\CMakeFiles\brutal_engine.dir\private\world\brush.cpp.obj engine\CMakeFiles\brutal_engine.dir\private\world\entity.cpp.obj engine\CMakeFiles\brutal_engine.dir\private\world\collision.cpp.obj engine\CMakeFiles\brutal_engine.dir\private\world\scene.cpp.obj engine\CMakeFiles\brutal_engine.dir\private\world\player.cpp.obj engine\CMakeFiles\brutal_engine.dir\private\engine.cpp.obj engine\CMakeFiles\brutal_engine.dir\private\world\flashlight.cpp.obj || third_party\glad\glad.lib
   LANGUAGE_COMPILE_FLAGS = /DWIN32 /D_WINDOWS /EHsc /Zi /Ob0 /Od /RTC1 -MDd
   LINK_FLAGS = /machine:x64
   OBJECT_DIR = engine\CMakeFiles\brutal_engine.dir
