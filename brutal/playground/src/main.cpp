@@ -261,6 +261,8 @@ int main() {
         if (platform_key_pressed(&platform.input, KEY_F9)) {
             editor_set_active(&editor, !editor.active, &platform, &player);
         }
+
+        player_capture_input(&player, &platform.input, editor.active);
         
         debug_system_update(&debug_system, &platform.input);
         if (debug_system_consume_reload(&debug_system)) {
@@ -274,13 +276,18 @@ int main() {
         
         // Fixed timestep physics update
         accumulator += frame_dt;
+        int fixed_steps = 0;
         while (accumulator >= fixed_dt) {
+            fixed_steps++;
+            player_set_frame_info(&player, (f32)frame_dt, fixed_steps, fixed_steps);
             if (!editor.active && platform.mouse_captured) {
                 PROFILE_SCOPE("Player Update");
                 player_update(&player, &platform.input, &scene.collision, (f32)fixed_dt);
             }
             accumulator -= fixed_dt;
         }
+
+        player_set_frame_info(&player, (f32)frame_dt, fixed_steps, fixed_steps);
 
         if (editor.active) {
             editor_update(&editor, &scene, &platform, (f32)frame_dt);

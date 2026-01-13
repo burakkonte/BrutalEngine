@@ -112,6 +112,20 @@ namespace brutal {
             draw_line(y, white, "Grounded: %s  Crouched: %s",
                 player->grounded ? "true" : "false",
                 player->is_crouched ? "true" : "false");
+            draw_line(y, white, "Jump Down:%d Pressed:%d Released:%d UI:%d",
+                player->jump_down ? 1 : 0,
+                player->jump_pressed_edge ? 1 : 0,
+                player->jump_released_edge ? 1 : 0,
+                player->ui_keyboard_capture ? 1 : 0);
+            draw_line(y, white, "Jump Buffer: %.3f  Coyote: %.3f  Requested:%d Consumed:%d",
+                player->jump_buffer_time,
+                player->coyote_time,
+                player->jump_requested ? 1 : 0,
+                player->jump_consumed_this_frame ? 1 : 0);
+            draw_line(y, white, "Fixed dt: %.4f  FixedSteps:%d StepIdx:%d",
+                player->last_fixed_dt,
+                player->last_fixed_step_count,
+                player->fixed_step_index);
             draw_line(y, white, "WishDir: (%.2f, %.2f, %.2f)",
                 player->wish_dir.x, player->wish_dir.y, player->wish_dir.z);
             if (input) {

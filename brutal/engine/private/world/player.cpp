@@ -2,7 +2,9 @@
 #include "brutal/world/collision.h"
 #include "brutal/core/platform.h"
 #include "brutal/core/profiler.h"
+#include "brutal/core/logging.h"
 #include <cmath>
+#include <algorithm>
 
 namespace brutal {
 
@@ -19,6 +21,57 @@ static const f32 JUMP_BUFFER_MAX = 0.1f;       // Buffer jump input before landi
 static const f32 GROUND_ACCEL = 35.0f;         // Ground acceleration (m/s^2)
 static const f32 AIR_ACCEL = 12.0f;            // Air acceleration (m/s^2)
 static const f32 GROUND_FRICTION = 8.0f;       // Ground friction (1/s)
+static const f32 MAX_TIMER_DT = 0.05f;         // Clamp timer dt to avoid spikes
+static const f32 JUMP_REQUEST_DUMP_THRESHOLD = 0.2f; // 200ms
+
+static void player_log_jump_frame(Player* p, f32 dt) {
+    Player::JumpDebugFrame& frame = p->jump_debug_ring[p->jump_debug_index];
+    frame.frame_index = p->jump_debug_frame_index++;
+    frame.physics_index = p->jump_debug_physics_index++;
+    frame.dt = dt;
+    frame.fixed_step_count = p->last_fixed_step_count;
+    frame.fixed_step_index = p->fixed_step_index;
+    frame.ui_keyboard_capture = p->ui_keyboard_capture;
+    frame.space_down = p->jump_down;
+    frame.space_pressed_edge = p->jump_pressed_edge;
+    frame.space_released_edge = p->jump_released_edge;
+    frame.jump_buffer_time = p->jump_buffer_time;
+    frame.coyote_time = p->coyote_time;
+    frame.grounded = p->grounded;
+    frame.grounded_reason = p->grounded_reason;
+    frame.vertical_velocity = p->velocity.y;
+    frame.jump_requested = p->jump_requested;
+    frame.jump_consumed_this_frame = p->jump_consumed_this_frame;
+    p->jump_debug_index = (p->jump_debug_index + 1) % Player::kJumpDebugRingSize;
+}
+
+static void player_dump_jump_ring(const Player* p, const char* reason) {
+    LOG_WARN("==== Jump Debug Dump (%s) ====", reason);
+    for (u32 i = 0; i < Player::kJumpDebugRingSize; ++i) {
+        u32 idx = (p->jump_debug_index + i) % Player::kJumpDebugRingSize;
+        const Player::JumpDebugFrame& f = p->jump_debug_ring[idx];
+        LOG_WARN(
+            "F%llu P%llu dt=%.4f fixedSteps=%d step=%d ui=%d space(d/p/r)=%d/%d/%d "
+            "buf=%.3f coy=%.3f grounded=%d(%s) vy=%.3f req=%d consumed=%d",
+            (unsigned long long)f.frame_index,
+            (unsigned long long)f.physics_index,
+            f.dt,
+            f.fixed_step_count,
+            f.fixed_step_index,
+            f.ui_keyboard_capture ? 1 : 0,
+            f.space_down ? 1 : 0,
+            f.space_pressed_edge ? 1 : 0,
+            f.space_released_edge ? 1 : 0,
+            f.jump_buffer_time,
+            f.coyote_time,
+            f.grounded ? 1 : 0,
+            f.grounded_reason ? f.grounded_reason : "unknown",
+            f.vertical_velocity,
+            f.jump_requested ? 1 : 0,
+            f.jump_consumed_this_frame ? 1 : 0);
+    }
+    LOG_WARN("==== End Jump Debug Dump ====");
+}
 
 static void apply_ground_friction(Player* p, f32 dt) {
     f32 speed = sqrtf(p->velocity.x * p->velocity.x + p->velocity.z * p->velocity.z);
@@ -85,6 +138,21 @@ void player_init(Player* p) {
     p->jump_requested = false;
     p->coyote_time = 0.0f;
     p->jump_buffer_time = 0.0f;
+    p->jump_down = false;
+    p->jump_pressed_edge = false;
+    p->jump_released_edge = false;
+    p->ui_keyboard_capture = false;
+    p->jump_consumed_this_frame = false;
+    p->jump_request_age = 0.0f;
+    p->jump_request_dumped = false;
+    p->grounded_reason = "init";
+    p->last_fixed_dt = 0.0f;
+    p->last_frame_dt = 0.0f;
+    p->last_fixed_step_count = 0;
+    p->fixed_step_index = 0;
+    p->jump_debug_index = 0;
+    p->jump_debug_frame_index = 0;
+    p->jump_debug_physics_index = 0;
 }
 
 // =============================================================================
@@ -128,12 +196,41 @@ bool player_can_stand(const Player* p, const CollisionWorld* col) {
     return true;
 }
 
+void player_capture_input(Player* p, const InputState* input, bool ui_keyboard_capture) {
+    p->ui_keyboard_capture = ui_keyboard_capture;
+    if (!input) {
+        p->jump_down = false;
+        p->jump_pressed_edge = false;
+        p->jump_released_edge = false;
+        return;
+    }
+
+    p->jump_down = platform_key_down(input, KEY_SPACE);
+    p->jump_pressed_edge = platform_key_pressed(input, KEY_SPACE);
+    p->jump_released_edge = platform_key_released(input, KEY_SPACE);
+
+    if (!ui_keyboard_capture && p->jump_pressed_edge) {
+        p->jump_buffer_time = JUMP_BUFFER_MAX;
+        p->jump_requested = true;
+        p->jump_request_age = 0.0f;
+        p->jump_request_dumped = false;
+    }
+}
+
+void player_set_frame_info(Player* p, f32 frame_dt, i32 fixed_step_count, i32 fixed_step_index) {
+    p->last_frame_dt = frame_dt;
+    p->last_fixed_step_count = fixed_step_count;
+    p->fixed_step_index = fixed_step_index;
+}
+
 // =============================================================================
 // Main Update
 // =============================================================================
 void player_update(Player* p, const InputState* input, const CollisionWorld* col, f32 dt) {
+    (void)input;
     // Clamp dt to prevent physics explosion on lag spikes
     if (dt > 0.1f) dt = 0.1f;
+    p->last_fixed_dt = dt;
     
     // =========================================================================
     // Mouse Look
@@ -142,13 +239,7 @@ void player_update(Player* p, const InputState* input, const CollisionWorld* col
     f32 dpitch = (f32)(-input->mouse.delta_y) * p->sensitivity;
     camera_rotate(&p->camera, dyaw, dpitch);
     
-    // =========================================================================
-    // Jump Input (edge-triggered)
-    // =========================================================================
-    bool jump_pressed = platform_key_pressed(input, KEY_SPACE);
-    if (jump_pressed) {
-        p->jump_buffer_time = JUMP_BUFFER_MAX;
-    }
+    
     
     // =========================================================================
     // Crouch State (hold to crouch)
@@ -256,28 +347,44 @@ void player_update(Player* p, const InputState* input, const CollisionWorld* col
     // =========================================================================
     // Jumping (with coyote time and jump buffering)
     // =========================================================================
+    p->jump_consumed_this_frame = false;
+    const f32 timer_dt = std::min(dt, MAX_TIMER_DT);
     // Update coyote time
     if (p->grounded) {
         p->coyote_time = COYOTE_TIME_MAX;
     } else {
-        p->coyote_time -= dt;
+        p->coyote_time -= timer_dt;
         if (p->coyote_time < 0) p->coyote_time = 0;
     }
     
     // Update jump buffer
     if (p->jump_buffer_time > 0) {
-        p->jump_buffer_time -= dt;
+        p->jump_buffer_time -= timer_dt;
+        if (p->jump_buffer_time < 0) p->jump_buffer_time = 0.0f;
     }
     
     // Execute jump if conditions are met
-    bool can_jump = p->coyote_time > 0 && p->velocity.y <= 0.1f;  // Coyote or grounded, not already jumping
-    bool want_jump = p->jump_buffer_time > 0;
+    bool can_jump = (p->grounded || p->coyote_time > 0.0f) && !p->jump_consumed_this_frame;    bool want_jump = p->jump_buffer_time > 0;
     
     if (can_jump && want_jump) {
         p->velocity.y = p->jump_velocity;
         p->coyote_time = 0;           // Consume coyote time
         p->jump_buffer_time = 0;      // Consume jump buffer
         p->grounded = false;          // We're airborne now
+        p->jump_consumed_this_frame = true;
+        p->jump_requested = false;
+        p->jump_request_age = 0.0f;
+    }
+
+    if (p->jump_requested) {
+        p->jump_request_age += dt;
+        if (!p->jump_request_dumped && p->jump_request_age >= JUMP_REQUEST_DUMP_THRESHOLD) {
+            player_dump_jump_ring(p, "jump request not consumed within 200ms");
+            p->jump_request_dumped = true;
+        }
+        if (p->jump_buffer_time <= 0.0f && !p->jump_consumed_this_frame) {
+            p->jump_requested = false;
+        }
     }
     
     // =========================================================================
@@ -311,6 +418,7 @@ void player_update(Player* p, const InputState* input, const CollisionWorld* col
         // Update grounded state based on collision
         bool grounded_hit = result.hit_floor && p->velocity.y <= 0.0f;
         p->grounded = grounded_hit;
+        p->grounded_reason = grounded_hit ? "sweep_hit_floor" : "air";
         
         // If we just landed, zero out vertical velocity
         if (grounded_hit && p->velocity.y < 0) {
@@ -325,7 +433,9 @@ void player_update(Player* p, const InputState* input, const CollisionWorld* col
         // No collision world - just move freely
         p->camera.position = p->camera.position + movement;
         p->grounded = false;
+        p->grounded_reason = "no_collision";
     }
+    player_log_jump_frame(p, dt);
 }
 
 }

@@ -3,6 +3,7 @@
 
 #include "brutal/renderer/camera.h"
 #include "brutal/math/geometry.h"
+#include "brutal/core/types.h"
 
 namespace brutal {
 
@@ -51,9 +52,51 @@ struct Player {
     bool jump_requested;   // Jump was requested this frame
     f32 coyote_time;       // Time since last grounded (for late jumps)
     f32 jump_buffer_time;  // Time since jump was pressed (for early jumps)
+
+    // Input edges (captured per render frame)
+    bool jump_down;
+    bool jump_pressed_edge;
+    bool jump_released_edge;
+    bool ui_keyboard_capture;
+
+    // Jump debug telemetry
+    bool jump_consumed_this_frame;
+    f32 jump_request_age;
+    bool jump_request_dumped;
+    const char* grounded_reason;
+    f32 last_fixed_dt;
+    f32 last_frame_dt;
+    i32 last_fixed_step_count;
+    i32 fixed_step_index;
+
+    // Jump debug ring buffer (last 120 frames)
+    static constexpr u32 kJumpDebugRingSize = 120;
+    struct JumpDebugFrame {
+        u64 frame_index;
+        u64 physics_index;
+        f32 dt;
+        i32 fixed_step_count;
+        i32 fixed_step_index;
+        bool ui_keyboard_capture;
+        bool space_down;
+        bool space_pressed_edge;
+        bool space_released_edge;
+        f32 jump_buffer_time;
+        f32 coyote_time;
+        bool grounded;
+        const char* grounded_reason;
+        f32 vertical_velocity;
+        bool jump_requested;
+        bool jump_consumed_this_frame;
+    } jump_debug_ring[kJumpDebugRingSize];
+    u32 jump_debug_index;
+    u64 jump_debug_frame_index;
+    u64 jump_debug_physics_index;
 };
 
 void player_init(Player* p);
+void player_capture_input(Player* p, const InputState* input, bool ui_keyboard_capture);
+void player_set_frame_info(Player* p, f32 frame_dt, i32 fixed_step_count, i32 fixed_step_index);
 void player_update(Player* p, const InputState* input, const CollisionWorld* col, f32 dt);
 AABB player_get_bounds(const Player* p);
 

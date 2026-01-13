@@ -122,9 +122,9 @@ void platform_poll_events(PlatformState* state) {
         SHORT key_state = GetAsyncKeyState(i);
         bool is_down = (key_state & 0x8000) != 0;
         bool was_down = state->input.keys.down_previous[i];
-        bool pressed = (key_state & 0x0001) != 0;
+
         state->input.keys.down[i] = is_down;
-        state->input.keys.pressed[i] = pressed || (is_down && !was_down);
+        state->input.keys.pressed[i] = (is_down && !was_down);
         state->input.keys.released[i] = (!is_down && was_down);
     }
     
