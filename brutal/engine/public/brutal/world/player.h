@@ -3,6 +3,7 @@
 
 #include "brutal/renderer/camera.h"
 #include "brutal/math/geometry.h"
+#include "brutal/math/vec.h"
 #include "brutal/core/types.h"
 
 namespace brutal {
@@ -28,6 +29,12 @@ struct Player {
     f32 sprint_speed;
     f32 crouch_speed;
     f32 sensitivity;
+    bool invert_look_y;
+    bool enable_look_smoothing;
+    f32 look_smoothing_alpha;
+    f32 min_pitch;
+    f32 max_pitch;
+    Vec2 look_smoothed;
     
     // Physics parameters (NEW - for proper gravity/jump)
     f32 gravity;           // Gravity acceleration (m/s^2)
@@ -97,6 +104,11 @@ struct Player {
 void player_init(Player* p);
 void player_capture_input(Player* p, const InputState* input, bool ui_keyboard_capture);
 void player_set_frame_info(Player* p, f32 frame_dt, i32 fixed_step_count, i32 fixed_step_index);
+struct PlayerLookResult {
+    f32 yaw_delta;
+    f32 pitch_delta;
+};
+PlayerLookResult player_apply_mouse_look(Player* p, const InputState* input, bool ui_mouse_capture);
 void player_update(Player* p, const InputState* input, const CollisionWorld* col, f32 dt);
 AABB player_get_bounds(const Player* p);
 

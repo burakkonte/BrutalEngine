@@ -7,6 +7,7 @@ namespace brutal {
 
     struct CollisionWorld;
     struct InputState;
+    struct PlatformState;
     struct Player;
     struct RendererState;
 
@@ -30,6 +31,7 @@ namespace brutal {
     void debug_system_draw(const DebugSystem* system,
         const DebugFrameInfo& frame,
         const InputState* input,
+        const PlatformState* platform,
         const Player* player,
         const RendererState* renderer,
         const CollisionWorld* collision,

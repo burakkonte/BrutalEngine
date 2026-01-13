@@ -31,6 +31,7 @@ struct ButtonState {
 struct MouseState {
     i32 x, y;
     i32 delta_x, delta_y;
+    i32 raw_dx, raw_dy;
     ButtonState left, right, middle;
 };
 
@@ -46,6 +47,36 @@ struct InputState {
     MouseState mouse;
 };
 
+struct MouseDelta {
+    i32 dx;
+    i32 dy;
+};
+
+struct MouseLookTelemetryFrame {
+    u64 frame_index;
+    f32 dt;
+    f32 frame_ms;
+    i32 raw_dx;
+    i32 raw_dy;
+    i32 consumed_dx;
+    i32 consumed_dy;
+    f32 yaw_delta;
+    f32 pitch_delta;
+    bool dt_spike;
+    bool dx_spike;
+    bool mouse_look_enabled;
+    bool ui_mouse_capture;
+    bool input_focused;
+};
+
+struct MouseLookTelemetry {
+    static constexpr u32 kRingSize = 120;
+    MouseLookTelemetryFrame frames[kRingSize];
+    u32 index;
+    u64 frame_index;
+    u64 last_dump_frame;
+};
+
 struct PlatformState {
     void* hwnd;
     void* hdc;
@@ -54,9 +85,14 @@ struct PlatformState {
     i32 window_height;
     bool should_quit;
     bool mouse_captured;
+    bool mouse_look_enabled;
+    bool input_focused;
     using MessageHandler = bool (*)(void* hwnd, u32 msg, u64 wparam, i64 lparam);
     MessageHandler message_handler;
     InputState input;
+    i32 mouse_accum_dx;
+    i32 mouse_accum_dy;
+    MouseLookTelemetry mouse_look;
 };
 
 bool platform_init(PlatformState* state, const char* title, i32 width, i32 height);
@@ -64,6 +100,21 @@ void platform_shutdown(PlatformState* state);
 void platform_poll_events(PlatformState* state);
 void platform_swap_buffers(PlatformState* state);
 void platform_set_mouse_capture(PlatformState* state, bool capture);
+void platform_enable_mouse_look(PlatformState* state);
+void platform_disable_mouse_look(PlatformState* state);
+MouseDelta platform_consume_mouse_delta(PlatformState* state);
+void platform_clear_mouse_delta(PlatformState* state);
+void platform_mouse_look_record(PlatformState* state,
+    f32 dt,
+    f32 frame_ms,
+    i32 raw_dx,
+    i32 raw_dy,
+    i32 consumed_dx,
+    i32 consumed_dy,
+    f32 yaw_delta,
+    f32 pitch_delta,
+    bool ui_mouse_capture);
+const MouseLookTelemetryFrame* platform_mouse_look_latest(const PlatformState* state);
 void platform_set_window_title(PlatformState* state, const char* title);
 void platform_set_message_handler(PlatformState* state, PlatformState::MessageHandler handler);
 

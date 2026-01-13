@@ -84,6 +84,7 @@ namespace brutal {
     void debug_system_draw(const DebugSystem* system,
         const DebugFrameInfo& frame,
         const InputState* input,
+        const PlatformState* platform,
         const Player* player,
         const RendererState* renderer,
         const CollisionWorld* collision,
@@ -140,6 +141,21 @@ namespace brutal {
                     jump ? 1 : 0, crouch ? 1 : 0);
             }
             y += 6;
+        }
+
+        if (platform) {
+            const MouseLookTelemetryFrame* look = platform_mouse_look_latest(platform);
+            if (look) {
+                draw_line(y, yellow,
+                    "Mouse raw(%d,%d) consumed(%d,%d) dt=%.3fms stutter(dt=%d dx=%d) look=%d ui=%d",
+                    look->raw_dx, look->raw_dy,
+                    look->consumed_dx, look->consumed_dy,
+                    look->frame_ms,
+                    look->dt_spike ? 1 : 0,
+                    look->dx_spike ? 1 : 0,
+                    look->mouse_look_enabled ? 1 : 0,
+                    look->ui_mouse_capture ? 1 : 0);
+            }
         }
 
         if (system->show_perf) {

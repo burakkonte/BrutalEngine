@@ -252,7 +252,7 @@ int main() {
         // Handle escape key
         if (platform_key_pressed(&platform.input, KEY_ESCAPE)) {
             if (platform.mouse_captured) {
-                platform_set_mouse_capture(&platform, false);
+                platform_disable_mouse_look(&platform);
             } else {
                 platform.should_quit = true;
             }
@@ -270,9 +270,27 @@ int main() {
         }
         
         // Capture mouse on click (play mode)
-        if (!editor.active && platform.input.mouse.left.pressed && !platform.mouse_captured) {
-            platform_set_mouse_capture(&platform, true);
+        if (!editor.active && platform.input.mouse.left.pressed && !platform.mouse_look_enabled) {
+            platform_enable_mouse_look(&platform);
         }
+
+        if (editor.active && platform.mouse_look_enabled) {
+            platform_disable_mouse_look(&platform);
+        }
+
+        MouseDelta look_delta = platform_consume_mouse_delta(&platform);
+        const bool ui_mouse_capture = editor.active || !platform.mouse_look_enabled || !platform.input_focused;
+        PlayerLookResult look_result = player_apply_mouse_look(&player, &platform.input, ui_mouse_capture);
+        platform_mouse_look_record(&platform,
+            (f32)frame_dt,
+            (f32)(frame_dt * 1000.0),
+            platform.input.mouse.raw_dx,
+            platform.input.mouse.raw_dy,
+            look_delta.dx,
+            look_delta.dy,
+            look_result.yaw_delta,
+            look_result.pitch_delta,
+            editor.active);
         
         // Fixed timestep physics update
         accumulator += frame_dt;
@@ -330,7 +348,7 @@ int main() {
         frame_info.delta_time = (f32)frame_dt;
         frame_info.frame_ms = (f32)(frame_dt * 1000.0);
         frame_info.fps = (frame_dt > 0.0) ? (f32)(1.0 / frame_dt) : 0.0f;
-        debug_system_draw(&debug_system, frame_info, &platform.input, &player, &renderer, &scene.collision,
+        debug_system_draw(&debug_system, frame_info, &platform.input, &platform, &player, &renderer, &scene.collision,
             platform.window_width, platform.window_height);
         if (editor.active) {
             editor_draw_ui(&editor, &scene, &platform);

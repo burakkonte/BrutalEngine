@@ -23,6 +23,16 @@ static const f32 AIR_ACCEL = 12.0f;            // Air acceleration (m/s^2)
 static const f32 GROUND_FRICTION = 8.0f;       // Ground friction (1/s)
 static const f32 MAX_TIMER_DT = 0.05f;         // Clamp timer dt to avoid spikes
 static const f32 JUMP_REQUEST_DUMP_THRESHOLD = 0.2f; // 200ms
+static const f32 TWO_PI = 6.283185f;
+
+static f32 clampf(f32 value, f32 min_val, f32 max_val) {
+    return std::max(min_val, std::min(value, max_val));
+}
+
+static void wrap_yaw(f32& yaw) {
+    while (yaw > TWO_PI) yaw -= TWO_PI;
+    while (yaw < -TWO_PI) yaw += TWO_PI;
+}
 
 static void player_log_jump_frame(Player* p, f32 dt) {
     Player::JumpDebugFrame& frame = p->jump_debug_ring[p->jump_debug_index];
@@ -116,6 +126,12 @@ void player_init(Player* p) {
     p->sprint_speed = 7.5f;
     p->crouch_speed = 2.5f;
     p->sensitivity = 0.002f;
+    p->invert_look_y = false;
+    p->enable_look_smoothing = false;
+    p->look_smoothing_alpha = 0.25f;
+    p->min_pitch = -1.553f;
+    p->max_pitch = 1.553f;
+    p->look_smoothed = Vec2(0, 0);
     
     // Physics parameters
     p->gravity = GRAVITY;
@@ -223,6 +239,34 @@ void player_set_frame_info(Player* p, f32 frame_dt, i32 fixed_step_count, i32 fi
     p->fixed_step_index = fixed_step_index;
 }
 
+PlayerLookResult player_apply_mouse_look(Player* p, const InputState* input, bool ui_mouse_capture) {
+    PlayerLookResult result = {};
+    if (!p || !input) return result;
+    if (ui_mouse_capture) {
+        p->look_smoothed = Vec2(0, 0);
+        return result;
+    }
+
+    Vec2 delta(static_cast<f32>(input->mouse.delta_x),
+        static_cast<f32>(input->mouse.delta_y));
+
+    if (p->enable_look_smoothing) {
+        const f32 alpha = clampf(p->look_smoothing_alpha, 0.0f, 1.0f);
+        p->look_smoothed = p->look_smoothed * (1.0f - alpha) + delta * alpha;
+        delta = p->look_smoothed;
+    }
+
+    const f32 invert = p->invert_look_y ? 1.0f : -1.0f;
+    result.yaw_delta = delta.x * p->sensitivity;
+    result.pitch_delta = delta.y * p->sensitivity * invert;
+
+    p->camera.yaw += result.yaw_delta;
+    p->camera.pitch = clampf(p->camera.pitch + result.pitch_delta, p->min_pitch, p->max_pitch);
+    wrap_yaw(p->camera.yaw);
+
+    return result;
+}
+
 // =============================================================================
 // Main Update
 // =============================================================================
@@ -232,12 +276,7 @@ void player_update(Player* p, const InputState* input, const CollisionWorld* col
     if (dt > 0.1f) dt = 0.1f;
     p->last_fixed_dt = dt;
     
-    // =========================================================================
-    // Mouse Look
-    // =========================================================================
-    f32 dyaw = (f32)input->mouse.delta_x * p->sensitivity;
-    f32 dpitch = (f32)(-input->mouse.delta_y) * p->sensitivity;
-    camera_rotate(&p->camera, dyaw, dpitch);
+    
     
     
     
