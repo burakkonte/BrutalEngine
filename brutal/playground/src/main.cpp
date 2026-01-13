@@ -310,6 +310,9 @@ int main() {
         if (editor.active) {
             editor_update(&editor, &scene, &platform, (f32)frame_dt);
         }
+
+        player_update_flashlight(&player, (f32)frame_dt);
+        player_apply_flashlight(&player, &player.camera, &scene.lights, !editor.active);
         
         // Clear temp arena each frame
         arena_reset(&temp_arena);

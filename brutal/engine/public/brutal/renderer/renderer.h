@@ -26,6 +26,11 @@ struct RendererState {
     i32 loc_light_count;
     i32 loc_light_pos[MAX_POINT_LIGHTS];
     i32 loc_light_color[MAX_POINT_LIGHTS];
+    i32 loc_spot_light_count;
+    i32 loc_spot_light_pos[MAX_SPOT_LIGHTS];
+    i32 loc_spot_light_dir[MAX_SPOT_LIGHTS];
+    i32 loc_spot_light_color[MAX_SPOT_LIGHTS];
+    i32 loc_spot_light_params[MAX_SPOT_LIGHTS];
     u32 draw_calls;
     u32 triangles;
     u32 vertices;

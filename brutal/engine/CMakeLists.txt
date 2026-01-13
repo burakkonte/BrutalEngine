@@ -17,6 +17,7 @@ set(ENGINE_SOURCES
     private/world/collision.cpp
     private/world/scene.cpp
     private/world/player.cpp
+    private/world/flashlight.cpp
     private/engine.cpp
 )
 

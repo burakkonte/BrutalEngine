@@ -5,6 +5,7 @@
 #include "brutal/math/geometry.h"
 #include "brutal/math/vec.h"
 #include "brutal/core/types.h"
+#include "brutal/world/flashlight.h"
 
 namespace brutal {
 
@@ -23,6 +24,7 @@ struct Player {
     Camera camera;
     Vec3 velocity;
     Vec3 wish_dir;
+    PlayerFlashlight flashlight;
     
     // Movement parameters
     f32 walk_speed;
@@ -65,6 +67,7 @@ struct Player {
     bool jump_pressed_edge;
     bool jump_released_edge;
     bool ui_keyboard_capture;
+    bool flashlight_toggle_requested;
 
     // Jump debug telemetry
     bool jump_consumed_this_frame;
@@ -110,6 +113,8 @@ struct PlayerLookResult {
 };
 PlayerLookResult player_apply_mouse_look(Player* p, const InputState* input, bool ui_mouse_capture);
 void player_update(Player* p, const InputState* input, const CollisionWorld* col, f32 dt);
+void player_update_flashlight(Player* p, f32 dt);
+void player_apply_flashlight(Player* p, const Camera* camera, LightEnvironment* env, bool render_enabled);
 AABB player_get_bounds(const Player* p);
 
 // Check if player can stand up (no ceiling collision)

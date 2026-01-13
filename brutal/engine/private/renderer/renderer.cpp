@@ -29,6 +29,7 @@ void main() {
 static const char* lit_frag = R"(
 #version 330 core
 #define MAX_LIGHTS 16
+#define MAX_SPOT_LIGHTS 8
 in vec3 v_Normal;
 in vec3 v_Color;
 in vec3 v_WorldPos;
@@ -38,6 +39,11 @@ uniform vec4 u_Ambient;
 uniform vec4 u_LightPos[MAX_LIGHTS];
 uniform vec4 u_LightColor[MAX_LIGHTS];
 uniform int u_LightCount;
+uniform vec4 u_SpotLightPos[MAX_SPOT_LIGHTS];
+uniform vec4 u_SpotLightDir[MAX_SPOT_LIGHTS];
+uniform vec4 u_SpotLightColor[MAX_SPOT_LIGHTS];
+uniform vec4 u_SpotLightParams[MAX_SPOT_LIGHTS];
+uniform int u_SpotLightCount;
 out vec4 FragColor;
 void main() {
     vec3 N = normalize(v_Normal);
@@ -62,6 +68,31 @@ void main() {
         float NdH = max(dot(N, H), 0.0);
         specular += lcol * lint * pow(NdH, 32.0) * att * 0.2;
     }
+for (int i = 0; i < u_SpotLightCount && i < MAX_SPOT_LIGHTS; i++) {
+        vec3 lpos = u_SpotLightPos[i].xyz;
+        float lrange = u_SpotLightPos[i].w;
+        vec3 ldir = normalize(u_SpotLightDir[i].xyz);
+        float inner_cos = u_SpotLightDir[i].w;
+        vec3 lcol = u_SpotLightColor[i].rgb;
+        float lint = u_SpotLightColor[i].w;
+        float outer_cos = u_SpotLightParams[i].x;
+        float falloff = u_SpotLightParams[i].y;
+        vec3 to_frag = normalize(v_WorldPos - lpos);
+        float spot_cos = dot(to_frag, ldir);
+        float cone = smoothstep(outer_cos, inner_cos, spot_cos);
+        cone = pow(cone, max(falloff, 0.001));
+        vec3 L = lpos - v_WorldPos;
+        float dist = length(L);
+        L = normalize(L);
+        float att = 1.0 / (1.0 + (dist*dist) / (lrange*lrange*0.1));
+        att *= clamp(1.0 - dist/lrange, 0.0, 1.0);
+        att = att * att * cone;
+        float NdL = max(dot(N, L), 0.0);
+        diffuse += lcol * lint * NdL * att;
+        vec3 H = normalize(L + V);
+        float NdH = max(dot(N, H), 0.0);
+        specular += lcol * lint * pow(NdH, 32.0) * att * 0.2;
+    }
     vec3 base = v_Color * u_Color.rgb;
     vec3 final = base * (ambient + diffuse) + specular;
     final = final / (final + vec3(1.0));
@@ -78,12 +109,24 @@ bool renderer_init(RendererState* s, MemoryArena*) {
     s->loc_camera_pos = glGetUniformLocation(s->lit_shader.program, "u_CameraPos");
     s->loc_ambient = glGetUniformLocation(s->lit_shader.program, "u_Ambient");
     s->loc_light_count = glGetUniformLocation(s->lit_shader.program, "u_LightCount");
+    s->loc_spot_light_count = glGetUniformLocation(s->lit_shader.program, "u_SpotLightCount");
     for (u32 i = 0; i < MAX_POINT_LIGHTS; i++) {
         char buf[64];
         snprintf(buf, sizeof(buf), "u_LightPos[%u]", i);
         s->loc_light_pos[i] = glGetUniformLocation(s->lit_shader.program, buf);
         snprintf(buf, sizeof(buf), "u_LightColor[%u]", i);
         s->loc_light_color[i] = glGetUniformLocation(s->lit_shader.program, buf);
+    }
+    for (u32 i = 0; i < MAX_SPOT_LIGHTS; i++) {
+        char buf[64];
+        snprintf(buf, sizeof(buf), "u_SpotLightPos[%u]", i);
+        s->loc_spot_light_pos[i] = glGetUniformLocation(s->lit_shader.program, buf);
+        snprintf(buf, sizeof(buf), "u_SpotLightDir[%u]", i);
+        s->loc_spot_light_dir[i] = glGetUniformLocation(s->lit_shader.program, buf);
+        snprintf(buf, sizeof(buf), "u_SpotLightColor[%u]", i);
+        s->loc_spot_light_color[i] = glGetUniformLocation(s->lit_shader.program, buf);
+        snprintf(buf, sizeof(buf), "u_SpotLightParams[%u]", i);
+        s->loc_spot_light_params[i] = glGetUniformLocation(s->lit_shader.program, buf);
     }
 
     s->cube_mesh = mesh_create_cube();
@@ -144,6 +187,9 @@ static void upload_lights(RendererState* s, const LightEnvironment* l, const Vec
         if (s->loc_light_count >= 0) {
             glUniform1i(s->loc_light_count, 0);
         }
+        if (s->loc_spot_light_count >= 0) {
+            glUniform1i(s->loc_spot_light_count, 0);
+        }
         return;
     }
     if (s->loc_ambient >= 0) {
@@ -159,6 +205,25 @@ static void upload_lights(RendererState* s, const LightEnvironment* l, const Vec
         }
         if (s->loc_light_color[i] >= 0) {
             glUniform4f(s->loc_light_color[i], p.color.x, p.color.y, p.color.z, p.intensity);
+        }
+    }
+
+    if (s->loc_spot_light_count >= 0) {
+        glUniform1i(s->loc_spot_light_count, (i32)l->spot_light_count);
+    }
+    for (u32 i = 0; i < l->spot_light_count && i < MAX_SPOT_LIGHTS; i++) {
+        const SpotLight& spt = l->spot_lights[i];
+        if (s->loc_spot_light_pos[i] >= 0) {
+            glUniform4f(s->loc_spot_light_pos[i], spt.position.x, spt.position.y, spt.position.z, spt.range);
+        }
+        if (s->loc_spot_light_dir[i] >= 0) {
+            glUniform4f(s->loc_spot_light_dir[i], spt.direction.x, spt.direction.y, spt.direction.z, spt.inner_cos);
+        }
+        if (s->loc_spot_light_color[i] >= 0) {
+            glUniform4f(s->loc_spot_light_color[i], spt.color.x, spt.color.y, spt.color.z, spt.intensity);
+        }
+        if (s->loc_spot_light_params[i] >= 0) {
+            glUniform4f(s->loc_spot_light_params[i], spt.outer_cos, spt.falloff, 0.0f, 0.0f);
         }
     }
 }

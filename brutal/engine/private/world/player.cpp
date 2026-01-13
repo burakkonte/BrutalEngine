@@ -3,6 +3,7 @@
 #include "brutal/core/platform.h"
 #include "brutal/core/profiler.h"
 #include "brutal/core/logging.h"
+#include "brutal/world/flashlight.h"
 #include <cmath>
 #include <algorithm>
 
@@ -120,6 +121,7 @@ void player_init(Player* p) {
     p->camera.position = Vec3(0, 1.7f, 0);
     p->velocity = Vec3(0, 0, 0);
     p->wish_dir = Vec3(0, 0, 0);
+    flashlight_init(&p->flashlight);
     
     // Movement speeds (meters per second)
     p->walk_speed = 4.5f;
@@ -158,6 +160,7 @@ void player_init(Player* p) {
     p->jump_pressed_edge = false;
     p->jump_released_edge = false;
     p->ui_keyboard_capture = false;
+    p->flashlight_toggle_requested = false;
     p->jump_consumed_this_frame = false;
     p->jump_request_age = 0.0f;
     p->jump_request_dumped = false;
@@ -218,6 +221,7 @@ void player_capture_input(Player* p, const InputState* input, bool ui_keyboard_c
         p->jump_down = false;
         p->jump_pressed_edge = false;
         p->jump_released_edge = false;
+        p->flashlight_toggle_requested = false;
         return;
     }
 
@@ -230,6 +234,9 @@ void player_capture_input(Player* p, const InputState* input, bool ui_keyboard_c
         p->jump_requested = true;
         p->jump_request_age = 0.0f;
         p->jump_request_dumped = false;
+    }
+    if (!ui_keyboard_capture && platform_key_pressed(input, KEY_F)) {
+        p->flashlight_toggle_requested = true;
     }
 }
 
@@ -475,6 +482,20 @@ void player_update(Player* p, const InputState* input, const CollisionWorld* col
         p->grounded_reason = "no_collision";
     }
     player_log_jump_frame(p, dt);
+}
+
+void player_update_flashlight(Player* p, f32 dt) {
+    if (!p) return;
+    if (p->flashlight_toggle_requested) {
+        flashlight_toggle(&p->flashlight);
+        p->flashlight_toggle_requested = false;
+    }
+    flashlight_update(&p->flashlight, dt);
+}
+
+void player_apply_flashlight(Player* p, const Camera* camera, LightEnvironment* env, bool render_enabled) {
+    if (!p) return;
+    flashlight_apply_to_renderer(&p->flashlight, camera, env, render_enabled);
 }
 
 }
