@@ -39,6 +39,7 @@ PFNGLFRONTFACEPROC glFrontFace = NULL;
 PFNGLFLUSHPROC glFlush = NULL;
 PFNGLGETSTRINGPROC glGetString = NULL;
 PFNGLGETERRORPROC glGetError = NULL;
+PFNGLSCISSORPROC glScissor = NULL;
 PFNGLDRAWARRAYSPROC glDrawArrays = NULL;
 PFNGLDRAWELEMENTSPROC glDrawElements = NULL;
 PFNGLLINEWIDTHPROC glLineWidth = NULL;
@@ -91,6 +92,7 @@ int gladLoadGL(void) {
     glFlush = (PFNGLFLUSHPROC)get_proc("glFlush");
     glGetString = (PFNGLGETSTRINGPROC)get_proc("glGetString");
     glGetError = (PFNGLGETERRORPROC)get_proc("glGetError");
+    glScissor = (PFNGLSCISSORPROC)get_proc("glScissor");
     glDrawArrays = (PFNGLDRAWARRAYSPROC)get_proc("glDrawArrays");
     glDrawElements = (PFNGLDRAWELEMENTSPROC)get_proc("glDrawElements");
     glLineWidth = (PFNGLLINEWIDTHPROC)get_proc("glLineWidth");

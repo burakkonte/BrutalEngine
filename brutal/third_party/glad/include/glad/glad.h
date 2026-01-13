@@ -48,6 +48,7 @@ typedef signed long long GLintptr;
 #define GL_CULL_FACE 0x0B44
 #define GL_DEPTH_TEST 0x0B71
 #define GL_BLEND 0x0BE2
+#define GL_SCISSOR_TEST 0x0C11
 #define GL_UNSIGNED_BYTE 0x1401
 #define GL_UNSIGNED_INT 0x1405
 #define GL_FLOAT 0x1406
@@ -92,6 +93,7 @@ typedef void (APIENTRY *PFNGLFRONTFACEPROC)(GLenum);
 typedef void (APIENTRY *PFNGLFLUSHPROC)(void);
 typedef const GLubyte* (APIENTRY *PFNGLGETSTRINGPROC)(GLenum);
 typedef GLenum (APIENTRY *PFNGLGETERRORPROC)(void);
+typedef void (APIENTRY* PFNGLSCISSORPROC)(GLint, GLint, GLsizei, GLsizei);
 typedef void (APIENTRY *PFNGLDRAWARRAYSPROC)(GLenum, GLint, GLsizei);
 typedef void (APIENTRY *PFNGLDRAWELEMENTSPROC)(GLenum, GLsizei, GLenum, const void*);
 typedef void (APIENTRY *PFNGLLINEWIDTHPROC)(GLfloat);
@@ -146,6 +148,7 @@ extern PFNGLFRONTFACEPROC glFrontFace;
 extern PFNGLFLUSHPROC glFlush;
 extern PFNGLGETSTRINGPROC glGetString;
 extern PFNGLGETERRORPROC glGetError;
+extern PFNGLSCISSORPROC glScissor;
 extern PFNGLDRAWARRAYSPROC glDrawArrays;
 extern PFNGLDRAWELEMENTSPROC glDrawElements;
 extern PFNGLLINEWIDTHPROC glLineWidth;

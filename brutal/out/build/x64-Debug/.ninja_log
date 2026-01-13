@@ -50,3 +50,15 @@
 109	913	7900090973529736	engine/CMakeFiles/brutal_engine.dir/private/core/platform_win32.cpp.obj	59d74a3683e34f36
 59	190	7900093054243968	engine/brutal_engine.lib	4daa13bcbeba46c1
 14	413	7900096558145316	playground/CMakeFiles/playground.dir/src/editor.cpp.obj	1cb1b655890d73f2
+64	180	7900099664042201	engine/CMakeFiles/brutal_engine.dir/private/renderer/gl_context.cpp.obj	82c08ee4a6b76fcd
+79	213	7900099664192531	engine/CMakeFiles/brutal_engine.dir/private/renderer/mesh.cpp.obj	c096ed1742718fde
+70	225	7900099664113469	engine/CMakeFiles/brutal_engine.dir/private/renderer/shader.cpp.obj	feffaa756aab4e7e
+87	239	7900099664276333	engine/CMakeFiles/brutal_engine.dir/private/renderer/renderer.cpp.obj	70fddd64c0d3dc8d
+100	249	7900099664406053	engine/CMakeFiles/brutal_engine.dir/private/renderer/debug_draw.cpp.obj	fc2c1238cd2f091
+54	289	7900099663946895	third_party/glad/CMakeFiles/glad.dir/src/glad.c.obj	20deae4a6d6ec533
+109	368	7900099664506183	playground/CMakeFiles/playground.dir/src/main.cpp.obj	44e0526b119051b7
+289	375	7900099666294999	third_party/glad/glad.lib	a1ebcce1257fc003
+375	455	7900099667157860	engine/brutal_engine.lib	4daa13bcbeba46c1
+455	825	7900099667955477	playground/playground.exe	ee10885f7a38a5b5
+8	242	7900100496042927	playground/CMakeFiles/playground.dir/src/main.cpp.obj	44e0526b119051b7
+242	505	7900100498386685	playground/playground.exe	ee10885f7a38a5b5
