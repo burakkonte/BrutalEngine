@@ -40,7 +40,7 @@ PropEntity* scene_add_prop(Scene* s, const Vec3& pos, const Vec3& scale, u32 mes
     if (s->prop_count >= s->prop_capacity) return nullptr;
     PropEntity* p = &s->props[s->prop_count++];
     p->transform.position = pos;
-    p->transform.rotation = Vec3(0,0,0);
+    p->transform.rotation = quat_identity();
     p->transform.scale = scale;
     p->mesh_id = mesh_id;
     p->color = color;

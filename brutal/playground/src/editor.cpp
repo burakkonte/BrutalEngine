@@ -4,6 +4,7 @@
 #include "brutal/core/platform.h"
 #include "brutal/world/player.h"
 #include "brutal/renderer/debug_draw.h"
+#include "brutal/math/quat.h"
 
 #include <algorithm>
 #include <cmath>
@@ -33,6 +34,22 @@ namespace brutal {
         constexpr f32 kGizmoScreenFactor = 0.15f;
         constexpr f32 kGizmoMinScale = 0.25f;
         constexpr f32 kGizmoHitFactor = 0.15f;
+        constexpr f32 kRadiansToDegrees = 57.295779513f;
+        constexpr f32 kDegreesToRadians = 0.0174532925f;
+        constexpr f32 kTransformEpsilon = 1e-4f;
+
+        constexpr i32 kInspectorPositionId = 7000;
+        constexpr i32 kInspectorRotationId = 7020;
+        constexpr i32 kInspectorScaleId = 7040;
+        constexpr i32 kInspectorResetPositionId = 7060;
+        constexpr i32 kInspectorResetRotationId = 7070;
+        constexpr i32 kInspectorResetScaleId = 7080;
+        constexpr i32 kInspectorSnapTranslateId = 7090;
+        constexpr i32 kInspectorSnapTranslateValueId = 7091;
+        constexpr i32 kInspectorSnapRotateId = 7100;
+        constexpr i32 kInspectorSnapRotateValueId = 7101;
+        constexpr i32 kInspectorSnapScaleId = 7110;
+        constexpr i32 kInspectorSnapScaleValueId = 7111;
 
         struct Ray {
             Vec3 origin;
@@ -43,12 +60,43 @@ namespace brutal {
             Vec3 normal;
             f32 d;
         };
-        i32 pack_entity_id(EditorState::SelectionType type, u32 index) {
+        i32 pack_entity_id(SelectionType type, u32 index) {
             return ((i32)type << 24) | (i32)index;
         }
 
         f32 clamp_f32(f32 value, f32 min_value, f32 max_value) {
             return std::max(min_value, std::min(value, max_value));
+        }
+
+        f32 radians_to_degrees(f32 radians) {
+            return radians * kRadiansToDegrees;
+        }
+
+        f32 degrees_to_radians(f32 degrees) {
+            return degrees * kDegreesToRadians;
+        }
+
+        Vec3 radians_to_degrees(const Vec3& radians) {
+            return Vec3(radians_to_degrees(radians.x), radians_to_degrees(radians.y), radians_to_degrees(radians.z));
+        }
+
+        Vec3 degrees_to_radians(const Vec3& degrees) {
+            return Vec3(degrees_to_radians(degrees.x), degrees_to_radians(degrees.y), degrees_to_radians(degrees.z));
+        }
+
+        bool vec3_near_equal(const Vec3& a, const Vec3& b, f32 epsilon) {
+            return fabsf(a.x - b.x) <= epsilon && fabsf(a.y - b.y) <= epsilon && fabsf(a.z - b.z) <= epsilon;
+        }
+
+        bool quat_near_equal(const Quat& a, const Quat& b, f32 epsilon) {
+            f32 dot = a.x * b.x + a.y * b.y + a.z * b.z + a.w * b.w;
+            return fabsf(dot) >= (1.0f - epsilon);
+        }
+
+        bool transform_near_equal(const Transform& a, const Transform& b, f32 epsilon) {
+            return vec3_near_equal(a.position, b.position, epsilon) &&
+                vec3_near_equal(a.scale, b.scale, epsilon) &&
+                quat_near_equal(a.rotation, b.rotation, epsilon);
         }
 
         Plane plane_from_point_normal(const Vec3& point, const Vec3& normal) {
@@ -240,14 +288,194 @@ namespace brutal {
             return changed;
         }
 
+        bool editor_is_transform_ui_id(i32 id) {
+            return (id >= kInspectorPositionId + 1 && id <= kInspectorPositionId + 3) ||
+                (id >= kInspectorRotationId + 1 && id <= kInspectorRotationId + 3) ||
+                (id >= kInspectorScaleId + 1 && id <= kInspectorScaleId + 3);
+        }
+
+        bool editor_transform_target_valid(const Scene* scene, SelectionType type, u32 index) {
+            switch (type) {
+            case SelectionType::Brush:
+                return index < scene->brush_count;
+            case SelectionType::Prop:
+                return index < scene->prop_count;
+            case SelectionType::Light:
+                return index < scene->lights.point_light_count;
+            case SelectionType::None:
+            default:
+                return false;
+            }
+        }
+
+        bool editor_get_transform_for_target(const Scene* scene, SelectionType type, u32 index, Transform* out_transform) {
+            if (!editor_transform_target_valid(scene, type, index)) return false;
+            if (type == SelectionType::Prop) {
+                const PropEntity& prop = scene->props[index];
+                if (out_transform) *out_transform = prop.transform;
+                return true;
+            }
+            if (type == SelectionType::Brush) {
+                const Brush& brush = scene->brushes[index];
+                AABB bounds = brush_to_aabb(&brush);
+                if (out_transform) {
+                    out_transform->position = aabb_center(bounds);
+                    out_transform->rotation = quat_identity();
+                    out_transform->scale = aabb_half_size(bounds) * 2.0f;
+                }
+                return true;
+            }
+            if (type == SelectionType::Light) {
+                const PointLight& light = scene->lights.point_lights[index];
+                if (out_transform) {
+                    out_transform->position = light.position;
+                    out_transform->rotation = quat_from_euler_radians(light.rotation);
+                    out_transform->scale = light.scale;
+                }
+                return true;
+            }
+            return false;
+        }
+
+        void editor_set_transform_for_target(EditorState* editor, Scene* scene, SelectionType type, u32 index, const Transform& transform) {
+            if (!editor_transform_target_valid(scene, type, index)) return;
+            if (type == SelectionType::Prop) {
+                PropEntity& prop = scene->props[index];
+                prop.transform = transform;
+                prop.transform.scale.x = std::max(prop.transform.scale.x, 0.05f);
+                prop.transform.scale.y = std::max(prop.transform.scale.y, 0.05f);
+                prop.transform.scale.z = std::max(prop.transform.scale.z, 0.05f);
+                return;
+            }
+            if (type == SelectionType::Brush) {
+                Brush& brush = scene->brushes[index];
+                Vec3 size = transform.scale;
+                size.x = std::max(size.x, 0.1f);
+                size.y = std::max(size.y, 0.1f);
+                size.z = std::max(size.z, 0.1f);
+                Vec3 half = size * 0.5f;
+                brush.min = transform.position - half;
+                brush.max = transform.position + half;
+                editor->rebuild_world = true;
+                editor->rebuild_collision = true;
+                return;
+            }
+            if (type == SelectionType::Light) {
+                PointLight& light = scene->lights.point_lights[index];
+                light.position = transform.position;
+                light.rotation = quat_to_euler_radians(transform.rotation);
+                light.scale = transform.scale;
+                return;
+            }
+        }
+
+        bool editor_get_selected_transform(const EditorState* editor, const Scene* scene, Transform* out_transform) {
+            return editor_get_transform_for_target(scene, editor->selection_type, editor->selection_index, out_transform);
+        }
+
+        void editor_set_selected_transform(EditorState* editor, Scene* scene, const Transform& transform) {
+            editor_set_transform_for_target(editor, scene, editor->selection_type, editor->selection_index, transform);
+        }
+
+        Vec3 editor_get_selected_pivot(const EditorState* editor, const Scene* scene) {
+            Transform transform;
+            if (!editor_get_selected_transform(editor, scene, &transform)) return Vec3(0.0f, 0.0f, 0.0f);
+            return transform.position;
+        }
+
+        void editor_push_transform_command(EditorState* editor, const TransformCommand& command) {
+            editor->undo_stack.push_back(command);
+            editor->redo_stack.clear();
+        }
+
+        void editor_cancel_inspector_edit(EditorState* editor) {
+            editor->inspector_edit_active = false;
+            editor->inspector_edit_ui_id = 0;
+        }
+
+        void editor_cancel_active_sessions(EditorState* editor) {
+            if (editor->gizmo_drag_active) {
+                editor->gizmo_drag_active = false;
+                editor->gizmo_axis_active = EditorState::GizmoAxis::None;
+                editor->gizmo_drag_entity_id = kInvalidEntityId;
+                editor->gizmo_drag_type = SelectionType::None;
+                editor->gizmo_drag_index = 0;
+            }
+            editor_cancel_inspector_edit(editor);
+        }
+
+        void editor_finalize_gizmo_drag(EditorState* editor, Scene* scene, bool commit) {
+            if (!editor->gizmo_drag_active) return;
+            if (commit) {
+                Transform after;
+                if (editor_get_transform_for_target(scene, editor->gizmo_drag_type, editor->gizmo_drag_index, &after)) {
+                    if (!transform_near_equal(editor->gizmo_drag_start_transform, after, kTransformEpsilon)) {
+                        TransformCommand cmd = { editor->gizmo_drag_type, editor->gizmo_drag_index,
+                            editor->gizmo_drag_start_transform, after };
+                        editor_push_transform_command(editor, cmd);
+                    }
+                }
+            }
+            editor->gizmo_drag_active = false;
+            editor->gizmo_axis_active = EditorState::GizmoAxis::None;
+            editor->gizmo_drag_entity_id = kInvalidEntityId;
+            editor->gizmo_drag_type = SelectionType::None;
+            editor->gizmo_drag_index = 0;
+        }
+
+        void editor_begin_inspector_edit(EditorState* editor, Scene* scene, i32 ui_id) {
+            Transform before;
+            if (!editor_get_selected_transform(editor, scene, &before)) return;
+            editor->inspector_edit_active = true;
+            editor->inspector_edit_ui_id = ui_id;
+            editor->inspector_edit_type = editor->selection_type;
+            editor->inspector_edit_index = editor->selection_index;
+            editor->inspector_edit_before = before;
+        }
+
+        void editor_end_inspector_edit(EditorState* editor, Scene* scene, bool commit) {
+            if (!editor->inspector_edit_active) return;
+            if (commit) {
+                Transform after;
+                if (editor_get_transform_for_target(scene, editor->inspector_edit_type, editor->inspector_edit_index, &after)) {
+                    if (!transform_near_equal(editor->inspector_edit_before, after, kTransformEpsilon)) {
+                        TransformCommand cmd = { editor->inspector_edit_type, editor->inspector_edit_index,
+                            editor->inspector_edit_before, after };
+                        editor_push_transform_command(editor, cmd);
+                    }
+                }
+            }
+            editor_cancel_inspector_edit(editor);
+        }
+
+        void editor_update_inspector_edit_session(EditorState* editor, Scene* scene) {
+            i32 active_id = editor->ui_active_id;
+            bool active_is_transform = editor_is_transform_ui_id(active_id);
+            if (editor->inspector_edit_active) {
+                bool selection_changed = editor->inspector_edit_type != editor->selection_type ||
+                    editor->inspector_edit_index != editor->selection_index;
+                bool same_active = active_is_transform && active_id == editor->inspector_edit_ui_id;
+                if (!same_active) {
+                    editor_end_inspector_edit(editor, scene, !selection_changed);
+                    if (!selection_changed && active_is_transform && active_id != 0) {
+                        editor_begin_inspector_edit(editor, scene, active_id);
+                    }
+                }
+            }
+            else if (active_is_transform && active_id != 0) {
+                editor_begin_inspector_edit(editor, scene, active_id);
+            }
+        }
+
         void editor_select_none(EditorState* editor) {
-            editor->selection_type = EditorState::SelectionType::None;
+            editor_cancel_active_sessions(editor);
+            editor->selection_type = SelectionType::None;
             editor->selection_index = 0;
             editor->selectedEntityId = kInvalidEntityId;
         }
 
-        void editor_select(EditorState* editor, EditorState::SelectionType type, u32 index) {
-            editor->selection_type = type;
+        void editor_select(EditorState* editor, SelectionType type, u32 index) {
+            editor_cancel_active_sessions(editor);            editor->selection_type = type;
             editor->selection_index = index;
             editor->selectedEntityId = pack_entity_id(type, index);
         }
@@ -271,52 +499,7 @@ namespace brutal {
             }
         }
 
-        bool editor_get_selected_position(const EditorState* editor, const Scene* scene, Vec3* out_position, Vec3* out_brush_size) {
-            if (editor->selection_type == EditorState::SelectionType::None) return false;
-
-            if (editor->selection_type == EditorState::SelectionType::Prop) {
-                const PropEntity& prop = scene->props[editor->selection_index];
-                if (out_position) *out_position = prop.transform.position;
-                if (out_brush_size) *out_brush_size = Vec3(0.0f, 0.0f, 0.0f);
-                return true;
-            }
-            if (editor->selection_type == EditorState::SelectionType::Brush) {
-                const Brush& brush = scene->brushes[editor->selection_index];
-                AABB bounds = brush_to_aabb(&brush);
-                if (out_position) *out_position = aabb_center(bounds);
-                if (out_brush_size) *out_brush_size = aabb_half_size(bounds) * 2.0f;
-                return true;
-            }
-            if (editor->selection_type == EditorState::SelectionType::Light) {
-                const PointLight& light = scene->lights.point_lights[editor->selection_index];
-                if (out_position) *out_position = light.position;
-                if (out_brush_size) *out_brush_size = Vec3(0.0f, 0.0f, 0.0f);
-                return true;
-            }
-            return false;
-        }
-
-        void editor_set_selected_position(EditorState* editor, Scene* scene, const Vec3& position, const Vec3& brush_size) {
-            if (editor->selection_type == EditorState::SelectionType::Prop) {
-                PropEntity& prop = scene->props[editor->selection_index];
-                prop.transform.position = position;
-                return;
-            }
-            if (editor->selection_type == EditorState::SelectionType::Brush) {
-                Brush& brush = scene->brushes[editor->selection_index];
-                Vec3 half = brush_size * 0.5f;
-                brush.min = position - half;
-                brush.max = position + half;
-                editor->rebuild_world = true;
-                editor->rebuild_collision = true;
-                return;
-            }
-            if (editor->selection_type == EditorState::SelectionType::Light) {
-                PointLight& light = scene->lights.point_lights[editor->selection_index];
-                light.position = position;
-                return;
-            }
-        }
+        
 
         f32 editor_gizmo_scale(const Camera& camera, const Vec3& pivot) {
             f32 distance = vec3_length(pivot - camera.position);
@@ -348,8 +531,9 @@ namespace brutal {
             file << "  \"props\": [\n";
             for (u32 i = 0; i < scene->prop_count; ++i) {
                 const PropEntity& prop = scene->props[i];
+                Vec3 rotation = quat_to_euler_radians(prop.transform.rotation);
                 file << "    {\"position\": [" << prop.transform.position.x << ", " << prop.transform.position.y << ", " << prop.transform.position.z << "], ";
-                file << "\"rotation\": [" << prop.transform.rotation.x << ", " << prop.transform.rotation.y << ", " << prop.transform.rotation.z << "], ";
+                file << "\"rotation\": [" << rotation.x << ", " << rotation.y << ", " << rotation.z << "], ";
                 file << "\"scale\": [" << prop.transform.scale.x << ", " << prop.transform.scale.y << ", " << prop.transform.scale.z << "], ";
                 file << "\"mesh_id\": " << prop.mesh_id << ", ";
                 file << "\"color\": [" << prop.color.x << ", " << prop.color.y << ", " << prop.color.z << "], ";
@@ -518,6 +702,7 @@ namespace brutal {
         bool json_read_prop(JsonCursor* c, PropEntity* prop) {
             if (!json_expect(c, '{')) return false;
             prop->active = true;
+            Vec3 rotation = Vec3(0.0f, 0.0f, 0.0f);
             while (true) {
                 std::string key;
                 if (!json_read_string(c, &key)) return false;
@@ -526,7 +711,7 @@ namespace brutal {
                     if (!json_read_vec3(c, &prop->transform.position)) return false;
                 }
                 else if (key == "rotation") {
-                    if (!json_read_vec3(c, &prop->transform.rotation)) return false;
+                    if (!json_read_vec3(c, &rotation)) return false;
                 }
                 else if (key == "scale") {
                     if (!json_read_vec3(c, &prop->transform.scale)) return false;
@@ -555,12 +740,15 @@ namespace brutal {
                     break;
                 }
             }
+            prop->transform.rotation = quat_from_euler_radians(rotation);
             return true;
         }
 
         bool json_read_point_light(JsonCursor* c, PointLight* light) {
             if (!json_expect(c, '{')) return false;
             light->active = true;
+            light->rotation = Vec3(0.0f, 0.0f, 0.0f);
+            light->scale = Vec3(1.0f, 1.0f, 1.0f);
             while (true) {
                 std::string key;
                 if (!json_read_string(c, &key)) return false;
@@ -741,23 +929,23 @@ namespace brutal {
 
         void editor_validate_selection(EditorState* editor, const Scene* scene) {
             bool valid = true;
-            if (editor->selection_type == EditorState::SelectionType::Brush) {
+            if (editor->selection_type == SelectionType::Brush) {
                 valid = editor->selection_index < scene->brush_count;
             }
-            else if (editor->selection_type == EditorState::SelectionType::Prop) {
+            else if (editor->selection_type == SelectionType::Prop) {
                 valid = editor->selection_index < scene->prop_count;
             }
-            else if (editor->selection_type == EditorState::SelectionType::Light) {
+            else if (editor->selection_type == SelectionType::Light) {
                 valid = editor->selection_index < scene->lights.point_light_count;
             }
             else {
-                valid = editor->selection_type == EditorState::SelectionType::None;
+                valid = editor->selection_type == SelectionType::None;
             }
 
             if (!valid) {
                 editor_select_none(editor);
             }
-            else if (editor->selection_type == EditorState::SelectionType::None) {
+            else if (editor->selection_type == SelectionType::None) {
                 editor->selectedEntityId = kInvalidEntityId;
             }
         }
@@ -769,14 +957,14 @@ namespace brutal {
             Ray ray = build_ray_for_viewport(viewport, input->mouse.x, input->mouse.y);
 
             f32 best_t = 1e9f;
-            EditorState::SelectionType best_type = EditorState::SelectionType::None;
+            SelectionType best_type = SelectionType::None;
             u32 best_index = 0;
 
             for (u32 i = 0; i < scene->brush_count; ++i) {
                 f32 t = 0.0f;
                 if (ray_intersect_aabb(ray, brush_to_aabb(&scene->brushes[i]), &t) && t < best_t) {
                     best_t = t;
-                    best_type = EditorState::SelectionType::Brush;
+                    best_type = SelectionType::Brush;
                     best_index = i;
                 }
             }
@@ -785,7 +973,7 @@ namespace brutal {
                 f32 t = 0.0f;
                 if (ray_intersect_aabb(ray, prop_aabb(scene->props[i]), &t) && t < best_t) {
                     best_t = t;
-                    best_type = EditorState::SelectionType::Prop;
+                    best_type = SelectionType::Prop;
                     best_index = i;
                 }
             }
@@ -796,23 +984,17 @@ namespace brutal {
                 AABB light_aabb = aabb_from_center_size(scene->lights.point_lights[i].position, light_size);
                 if (ray_intersect_aabb(ray, light_aabb, &t) && t < best_t) {
                     best_t = t;
-                    best_type = EditorState::SelectionType::Light;
+                    best_type = SelectionType::Light;
                     best_index = i;
                 }
             }
 
-            if (best_type == EditorState::SelectionType::None) {
+            if (best_type == SelectionType::None) {
                 editor_select_none(editor);
             }
             else {
                 editor_select(editor, best_type, best_index);
             }
-        }
-
-        void editor_cancel_gizmo_drag(EditorState* editor) {
-            editor->gizmo_drag_active = false;
-            editor->gizmo_axis_active = EditorState::GizmoAxis::None;
-            editor->gizmo_drag_entity_id = kInvalidEntityId;
         }
 
         EditorState::GizmoAxis editor_gizmo_pick_axis(const EditorState* editor, const Viewport& viewport, const InputState* input, const Vec3& pivot, f32 scale) {
@@ -844,34 +1026,36 @@ namespace brutal {
             const InputState* input = &platform->input;
             if (editor->gizmo_mode != EditorState::GizmoMode::Translate) {
                 editor->gizmo_axis_hot = EditorState::GizmoAxis::None;
-                if (editor->gizmo_drag_active) editor_cancel_gizmo_drag(editor);
+                if (editor->gizmo_drag_active) editor_finalize_gizmo_drag(editor, scene, false);
                 return false;
             }
 
-            if (editor->selection_type == EditorState::SelectionType::None) {
+            if (editor->selection_type == SelectionType::None) {
                 editor->gizmo_axis_hot = EditorState::GizmoAxis::None;
-                if (editor->gizmo_drag_active) editor_cancel_gizmo_drag(editor);
-                return false;
+                if (editor->gizmo_drag_active) editor_finalize_gizmo_drag(editor, scene, false);                return false;
             }
 
-            Vec3 pivot(0.0f, 0.0f, 0.0f);
-            Vec3 brush_size(0.0f, 0.0f, 0.0f);
-            if (!editor_get_selected_position(editor, scene, &pivot, &brush_size)) {
+            Transform transform;
+            if (!editor_get_selected_transform(editor, scene, &transform)) {
                 editor->gizmo_axis_hot = EditorState::GizmoAxis::None;
-                if (editor->gizmo_drag_active) editor_cancel_gizmo_drag(editor);
-                return false;
+                if (editor->gizmo_drag_active) editor_finalize_gizmo_drag(editor, scene, false);                return false;
             }
+            Vec3 pivot = transform.position;
 
             f32 scale = editor_gizmo_scale(viewport.camera, pivot);
             bool ui_capture = mouse_over_ui(platform);
 
             if (editor->gizmo_drag_active) {
                 if (editor->selectedEntityId != editor->gizmo_drag_entity_id) {
-                    editor_cancel_gizmo_drag(editor);
+                    editor_finalize_gizmo_drag(editor, scene, false);
                     return false;
                 }
-                if (!input->mouse.left.down || !platform->input_focused || ui_capture || editor->selection_type == EditorState::SelectionType::None) {
-                    editor_cancel_gizmo_drag(editor);
+                if (!input->mouse.left.down) {
+                    editor_finalize_gizmo_drag(editor, scene, true);
+                    return false;
+                }
+                if (!platform->input_focused || ui_capture || editor->selection_type == SelectionType::None) {
+                    editor_finalize_gizmo_drag(editor, scene, false);
                     return false;
                 }
                 Ray current_ray = build_ray_for_viewport(viewport, input->mouse.x, input->mouse.y);
@@ -887,7 +1071,9 @@ namespace brutal {
                     axis_delta = roundf(axis_delta / editor->snap_value) * editor->snap_value;
                 }
                 Vec3 new_pos = editor->gizmo_drag_start_pos + editor->gizmo_drag_axis * axis_delta;
-                editor_set_selected_position(editor, scene, new_pos, editor->gizmo_drag_brush_size);
+                Transform updated = editor->gizmo_drag_start_transform;
+                updated.position = new_pos;
+                editor_set_selected_transform(editor, scene, updated);
                 return true;
             }
             if (!platform->input_focused || ui_capture || platform->mouse_captured) {
@@ -907,7 +1093,9 @@ namespace brutal {
                 editor->gizmo_axis_active = editor->gizmo_axis_hot;
                 editor->gizmo_drag_entity_id = editor->selectedEntityId;
                 editor->gizmo_drag_start_pos = pivot;
-                editor->gizmo_drag_brush_size = brush_size;
+                editor->gizmo_drag_start_transform = transform;
+                editor->gizmo_drag_type = editor->selection_type;
+                editor->gizmo_drag_index = editor->selection_index;
                 editor->gizmo_drag_axis = editor_gizmo_axis_dir(editor->gizmo_axis_active, viewport.camera, editor->gizmo_local_space);
 
                 Ray start_ray = build_ray_for_viewport(viewport, input->mouse.x, input->mouse.y);
@@ -936,10 +1124,9 @@ namespace brutal {
 
         void editor_draw_gizmo(const EditorState* editor, const Scene* scene, const Viewport& viewport) {
             if (editor->gizmo_mode != EditorState::GizmoMode::Translate) return;
-            if (editor->selection_type == EditorState::SelectionType::None) return;
+            if (editor->selection_type == SelectionType::None) return;
 
-            Vec3 pivot(0.0f, 0.0f, 0.0f);
-            if (!editor_get_selected_position(editor, scene, &pivot, nullptr)) return;
+            Vec3 pivot = editor_get_selected_pivot(editor, scene);
 
             f32 scale = editor_gizmo_scale(viewport.camera, pivot);
 
@@ -977,7 +1164,7 @@ namespace brutal {
                 snprintf(label, sizeof(label), "Brush %u", i);
                 bool clicked = ui_button(editor, input, 1000 + (i32)i, x, y, kHierarchyWidth, label);
                 if (clicked) {
-                    editor_select(editor, EditorState::SelectionType::Brush, i);
+                    editor_select(editor, SelectionType::Brush, i);
                 }
                 y += kLineHeight;
             }
@@ -987,7 +1174,7 @@ namespace brutal {
                 snprintf(label, sizeof(label), "Prop %u", i);
                 bool clicked = ui_button(editor, input, 2000 + (i32)i, x, y, kHierarchyWidth, label);
                 if (clicked) {
-                    editor_select(editor, EditorState::SelectionType::Prop, i);
+                    editor_select(editor, SelectionType::Prop, i);
                 }
                 y += kLineHeight;
             }
@@ -997,7 +1184,7 @@ namespace brutal {
                 snprintf(label, sizeof(label), "Light %u", i);
                 bool clicked = ui_button(editor, input, 3000 + (i32)i, x, y, kHierarchyWidth, label);
                 if (clicked) {
-                    editor_select(editor, EditorState::SelectionType::Light, i);
+                    editor_select(editor, SelectionType::Light, i);
                 }
                 y += kLineHeight;
             }
@@ -1010,74 +1197,99 @@ namespace brutal {
             debug_text_printf(x, y, Vec3(0.9f, 0.8f, 0.6f), "Inspector");
             y += kLineHeight;
 
-            if (editor->selection_type == EditorState::SelectionType::None) {
+            if (editor->selection_type == SelectionType::None) {
                 debug_text_printf(x, y, Vec3(0.7f, 0.7f, 0.7f), "No selection");
                 return;
             }
 
-            if (editor->selection_type == EditorState::SelectionType::Brush) {
-                Brush& brush = scene->brushes[editor->selection_index];
-                Vec3 center = aabb_center(brush_to_aabb(&brush));
-                Vec3 size = aabb_half_size(brush_to_aabb(&brush)) * 2.0f;
-                bool changed = ui_drag_vec3(editor, input, 4000, x, y, "Center", &center, kDragSpeed);
-                y += kLineHeight * 4;
-                changed |= ui_drag_vec3(editor, input, 4010, x, y, "Size", &size, kDragSpeed);
-                y += kLineHeight * 4;
-                if (changed) {
-                    size.x = std::max(size.x, 0.1f);
-                    size.y = std::max(size.y, 0.1f);
-                    size.z = std::max(size.z, 0.1f);
-                    Vec3 half = size * 0.5f;
-                    brush.min = center - half;
-                    brush.max = center + half;
-                    editor->rebuild_world = true;
-                    editor->rebuild_collision = true;
-                }
-                bool invisible = (brush.flags & BRUSH_INVISIBLE) != 0;
-                if (ui_checkbox(editor, input, 4020, x, y, "Invisible", &invisible)) {
-                    if (invisible) brush.flags |= BRUSH_INVISIBLE; else brush.flags &= ~BRUSH_INVISIBLE;
-                    editor->rebuild_world = true;
-                }
-                y += kLineHeight;
+            const char* type_text = editor->selection_type == SelectionType::Brush ? "Brush"
+                : (editor->selection_type == SelectionType::Prop ? "Prop" : "Light");
+            debug_text_printf(x, y, Vec3(0.7f, 0.7f, 0.7f), "Type: %s", type_text);
+            y += kLineHeight;
+            debug_text_printf(x, y, Vec3(0.7f, 0.7f, 0.7f), "Name: %s %u", type_text, editor->selection_index);
+            y += kLineHeight;
+            debug_text_printf(x, y, Vec3(0.7f, 0.7f, 0.7f), "Id: %d", editor->selectedEntityId);
+            y += kLineHeight;
+
+            Transform transform;
+            if (!editor_get_selected_transform(editor, scene, &transform)) {
+                return;
             }
-            else if (editor->selection_type == EditorState::SelectionType::Prop) {
-                PropEntity& prop = scene->props[editor->selection_index];
-                bool changed = ui_drag_vec3(editor, input, 4100, x, y, "Position", &prop.transform.position, kDragSpeed);
-                y += kLineHeight * 4;
-                changed |= ui_drag_vec3(editor, input, 4110, x, y, "Rotation", &prop.transform.rotation, kDragSpeed * 0.5f);
-                y += kLineHeight * 4;
-                changed |= ui_drag_vec3(editor, input, 4120, x, y, "Scale", &prop.transform.scale, kDragSpeed);
-                y += kLineHeight * 4;
-                bool active = prop.active;
-                if (ui_checkbox(editor, input, 4130, x, y, "Active", &active)) {
-                    prop.active = active;
+
+            Vec3 rotation_degrees = radians_to_degrees(quat_to_euler_radians(transform.rotation));
+
+            bool changed = false;
+            bool position_changed = ui_drag_vec3(editor, input, kInspectorPositionId, x, y, "Position", &transform.position, kDragSpeed);
+            changed |= position_changed;
+            y += kLineHeight * 4;
+            if (ui_button(editor, input, kInspectorResetPositionId, x, y, 60, "Reset")) {
+                Transform before = transform;
+                transform.position = Vec3(0.0f, 0.0f, 0.0f);
+                editor_set_selected_transform(editor, scene, transform);
+                Transform after;
+                if (editor_get_selected_transform(editor, scene, &after) &&
+                    !transform_near_equal(before, after, kTransformEpsilon)) {
+                    TransformCommand cmd = { editor->selection_type, editor->selection_index, before, after };
+                    editor_push_transform_command(editor, cmd);
                 }
-                y += kLineHeight;
-                if (changed) {
-                    editor_apply_snap(editor, &prop.transform.position);
-                    prop.transform.scale.x = std::max(prop.transform.scale.x, 0.05f);
-                    prop.transform.scale.y = std::max(prop.transform.scale.y, 0.05f);
-                    prop.transform.scale.z = std::max(prop.transform.scale.z, 0.05f);
+                
+            }
+            y += kLineHeight;
+
+            bool rotation_changed = ui_drag_vec3(editor, input, kInspectorRotationId, x, y, "Rotation (deg)", &rotation_degrees, 0.5f);
+            y += kLineHeight * 4;
+            if (ui_button(editor, input, kInspectorResetRotationId, x, y, 60, "Reset")) {
+                Transform before = transform;
+                rotation_degrees = Vec3(0.0f, 0.0f, 0.0f);
+                transform.rotation = quat_identity();
+                editor_set_selected_transform(editor, scene, transform);
+                Transform after;
+                if (editor_get_selected_transform(editor, scene, &after) &&
+                    !transform_near_equal(before, after, kTransformEpsilon)) {
+                    TransformCommand cmd = { editor->selection_type, editor->selection_index, before, after };
+                    editor_push_transform_command(editor, cmd);
                 }
             }
-            else if (editor->selection_type == EditorState::SelectionType::Light) {
-                PointLight& light = scene->lights.point_lights[editor->selection_index];
-                bool changed = ui_drag_vec3(editor, input, 4200, x, y, "Position", &light.position, kDragSpeed);
-                y += kLineHeight * 4;
-                changed |= ui_drag_vec3(editor, input, 4210, x, y, "Color", &light.color, 0.005f);
-                y += kLineHeight * 4;
-                changed |= ui_drag_float(editor, input, 4220, x, y, "Radius", &light.radius, 0.01f);
-                y += kLineHeight;
-                changed |= ui_drag_float(editor, input, 4230, x, y, "Intensity", &light.intensity, 0.01f);
-                y += kLineHeight;
-                bool active = light.active;
-                if (ui_checkbox(editor, input, 4240, x, y, "Active", &active)) {
-                    light.active = active;
+            y += kLineHeight;
+
+            changed |= rotation_changed;
+
+            bool scale_changed = ui_drag_vec3(editor, input, kInspectorScaleId, x, y, "Scale", &transform.scale, kDragSpeed);
+            changed |= scale_changed;
+            y += kLineHeight * 4;
+            if (ui_button(editor, input, kInspectorResetScaleId, x, y, 60, "Reset")) {
+                Transform before = transform;
+                transform.scale = Vec3(1.0f, 1.0f, 1.0f);
+                editor_set_selected_transform(editor, scene, transform);
+                Transform after;
+                if (editor_get_selected_transform(editor, scene, &after) &&
+                    !transform_near_equal(before, after, kTransformEpsilon)) {
+                    TransformCommand cmd = { editor->selection_type, editor->selection_index, before, after };
+                    editor_push_transform_command(editor, cmd);
                 }
-                y += kLineHeight;
-                if (changed) {
-                    editor_apply_snap(editor, &light.position);
+            }
+            y += kLineHeight;
+
+            if (rotation_changed) {
+                transform.rotation = quat_from_euler_radians(degrees_to_radians(rotation_degrees));
+            }
+
+            if (changed) {
+                if (position_changed && editor->snap_enabled) {
+                    editor_apply_snap(editor, &transform.position);
                 }
+                if (rotation_changed && editor->rotate_snap_enabled && editor->rotate_snap_value > 0.0001f) {
+                    rotation_degrees.x = roundf(rotation_degrees.x / editor->rotate_snap_value) * editor->rotate_snap_value;
+                    rotation_degrees.y = roundf(rotation_degrees.y / editor->rotate_snap_value) * editor->rotate_snap_value;
+                    rotation_degrees.z = roundf(rotation_degrees.z / editor->rotate_snap_value) * editor->rotate_snap_value;
+                    transform.rotation = quat_from_euler_radians(degrees_to_radians(rotation_degrees));
+                }
+                if (scale_changed && editor->scale_snap_enabled && editor->scale_snap_value > 0.0001f) {
+                    transform.scale.x = roundf(transform.scale.x / editor->scale_snap_value) * editor->scale_snap_value;
+                    transform.scale.y = roundf(transform.scale.y / editor->scale_snap_value) * editor->scale_snap_value;
+                    transform.scale.z = roundf(transform.scale.z / editor->scale_snap_value) * editor->scale_snap_value;
+                }
+                editor_set_selected_transform(editor, scene, transform);
             }
 
             const char* mode = (editor->gizmo_mode == EditorState::GizmoMode::Translate)
@@ -1086,11 +1298,25 @@ namespace brutal {
             y += kLineHeight;
 
             bool snap = editor->snap_enabled;
-            if (ui_checkbox(editor, input, 4300, x, y, "Snap", &snap)) {
+            if (ui_checkbox(editor, input, kInspectorSnapTranslateId, x, y, "Snap (Translate)", &snap)) {
                 editor->snap_enabled = snap;
             }
             y += kLineHeight;
-            ui_drag_float(editor, input, 4310, x, y, "Snap Value", &editor->snap_value, 0.01f);
+            ui_drag_float(editor, input, kInspectorSnapTranslateValueId, x, y, "Snap Value", &editor->snap_value, 0.01f);
+            y += kLineHeight;
+            bool rotate_snap = editor->rotate_snap_enabled;
+            if (ui_checkbox(editor, input, kInspectorSnapRotateId, x, y, "Snap (Rotate)", &rotate_snap)) {
+                editor->rotate_snap_enabled = rotate_snap;
+            }
+            y += kLineHeight;
+            ui_drag_float(editor, input, kInspectorSnapRotateValueId, x, y, "Rotate Snap", &editor->rotate_snap_value, 1.0f);
+            y += kLineHeight;
+            bool scale_snap = editor->scale_snap_enabled;
+            if (ui_checkbox(editor, input, kInspectorSnapScaleId, x, y, "Snap (Scale)", &scale_snap)) {
+                editor->scale_snap_enabled = scale_snap;
+            }
+            y += kLineHeight;
+            ui_drag_float(editor, input, kInspectorSnapScaleValueId, x, y, "Scale Snap", &editor->scale_snap_value, 0.1f);
         }
 
         void editor_draw_assets(EditorState* editor, Scene* scene, PlatformState* platform) {
@@ -1155,12 +1381,16 @@ namespace brutal {
         editor->camera.position = Vec3(0, 2.0f, 6.0f);
         editor->move_speed = 6.0f;
         editor->look_sensitivity = 0.0025f;
-        editor->selection_type = EditorState::SelectionType::None;
+        editor->selection_type = SelectionType::None;
         editor->selection_index = 0;
         editor->selectedEntityId = kInvalidEntityId;
         editor->gizmo_mode = EditorState::GizmoMode::Translate;
         editor->snap_enabled = false;
         editor->snap_value = 0.5f;
+        editor->rotate_snap_enabled = false;
+        editor->rotate_snap_value = 15.0f;
+        editor->scale_snap_enabled = false;
+        editor->scale_snap_value = 0.1f;
         editor->show_grid = true;
         editor->gizmo_axis_hot = EditorState::GizmoAxis::None;
         editor->gizmo_axis_active = EditorState::GizmoAxis::None;
@@ -1170,9 +1400,18 @@ namespace brutal {
         editor->gizmo_drag_plane_point = Vec3(0, 0, 0);
         editor->gizmo_drag_start_hit = Vec3(0, 0, 0);
         editor->gizmo_drag_axis = Vec3(1, 0, 0);
-        editor->gizmo_drag_brush_size = Vec3(0, 0, 0);
+        editor->gizmo_drag_start_transform = transform_default();
         editor->gizmo_drag_entity_id = kInvalidEntityId;
+        editor->gizmo_drag_type = SelectionType::None;
+        editor->gizmo_drag_index = 0;
         editor->gizmo_local_space = false;
+        editor->undo_stack.clear();
+        editor->redo_stack.clear();
+        editor->inspector_edit_active = false;
+        editor->inspector_edit_ui_id = 0;
+        editor->inspector_edit_type = SelectionType::None;
+        editor->inspector_edit_index = 0;
+        editor->inspector_edit_before = transform_default();
         std::snprintf(editor->scene_path, sizeof(editor->scene_path), "scene.json");
         editor->rebuild_world = false;
         editor->rebuild_collision = false;
@@ -1200,7 +1439,7 @@ namespace brutal {
 
         if (platform_key_pressed(input, KEY_Q)) {
             editor->gizmo_mode = EditorState::GizmoMode::None;
-            editor_cancel_gizmo_drag(editor);
+            editor_finalize_gizmo_drag(editor, scene, false);
         }
         if (platform_key_pressed(input, KEY_W)) {
             editor->gizmo_mode = EditorState::GizmoMode::Translate;
@@ -1221,6 +1460,38 @@ namespace brutal {
                 editor->rebuild_world = true;
                 editor->rebuild_collision = true;
                 editor_select_none(editor);
+            }
+        }
+
+        bool shift_down = platform_key_down(input, KEY_SHIFT);
+        if (ctrl_down && platform_key_pressed(input, KEY_Z)) {
+            if (shift_down) {
+                if (!editor->redo_stack.empty()) {
+                    TransformCommand cmd = editor->redo_stack.back();
+                    editor->redo_stack.pop_back();
+                    if (editor_transform_target_valid(scene, cmd.type, cmd.index)) {
+                        editor_set_transform_for_target(editor, scene, cmd.type, cmd.index, cmd.after);
+                        editor->undo_stack.push_back(cmd);
+                    }
+                }
+            }
+            else if (!editor->undo_stack.empty()) {
+                TransformCommand cmd = editor->undo_stack.back();
+                editor->undo_stack.pop_back();
+                if (editor_transform_target_valid(scene, cmd.type, cmd.index)) {
+                    editor_set_transform_for_target(editor, scene, cmd.type, cmd.index, cmd.before);
+                    editor->redo_stack.push_back(cmd);
+                }
+            }
+        }
+        if (ctrl_down && platform_key_pressed(input, KEY_Y)) {
+            if (!editor->redo_stack.empty()) {
+                TransformCommand cmd = editor->redo_stack.back();
+                editor->redo_stack.pop_back();
+                if (editor_transform_target_valid(scene, cmd.type, cmd.index)) {
+                    editor_set_transform_for_target(editor, scene, cmd.type, cmd.index, cmd.after);
+                    editor->undo_stack.push_back(cmd);
+                }
             }
         }
 
@@ -1261,7 +1532,7 @@ namespace brutal {
         }
 
         if (!viewport.isActive && editor->gizmo_drag_active) {
-            editor_cancel_gizmo_drag(editor);
+            editor_finalize_gizmo_drag(editor, scene, false);
         }
 
         bool gizmo_consumed = false;
@@ -1283,6 +1554,7 @@ namespace brutal {
         editor_draw_assets(editor, scene, platform);
         editor_draw_top_bar(editor, scene, platform);
         ui_end(editor, &platform->input);
+        editor_update_inspector_edit_session(editor, scene);
 
         debug_text_printf(kPanelPadding, platform->window_height - kAssetsHeight - kLineHeight * 3,
             Vec3(0.7f, 0.7f, 0.7f), "Viewport: %d  Selected: %d", editor->activeViewportId, editor->selectedEntityId);
@@ -1300,15 +1572,15 @@ namespace brutal {
         viewport.camera = editor->camera;
         editor_draw_gizmo(editor, scene, viewport);
 
-        if (editor->selection_type == EditorState::SelectionType::Brush) {
+        if (editor->selection_type == SelectionType::Brush) {
             const Brush& brush = scene->brushes[editor->selection_index];
             debug_wire_box(aabb_center(brush_to_aabb(&brush)), aabb_half_size(brush_to_aabb(&brush)) * 2.0f, Vec3(1, 0.8f, 0.2f));
         }
-        else if (editor->selection_type == EditorState::SelectionType::Prop) {
+        else if (editor->selection_type == SelectionType::Prop) {
             const PropEntity& prop = scene->props[editor->selection_index];
             debug_wire_box(prop.transform.position, prop.transform.scale, Vec3(0.3f, 1.0f, 0.5f));
         }
-        else if (editor->selection_type == EditorState::SelectionType::Light) {
+        else if (editor->selection_type == SelectionType::Light) {
             const PointLight& light = scene->lights.point_lights[editor->selection_index];
             debug_wire_box(light.position, Vec3(0.2f, 0.2f, 0.2f), Vec3(1.0f, 0.9f, 0.4f));
         }

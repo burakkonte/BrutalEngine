@@ -2,16 +2,19 @@
 #define BRUTAL_WORLD_ENTITY_H
 
 #include "brutal/math/vec.h"
+#include "brutal/math/quat.h"
 #include "brutal/math/mat.h"
 
 namespace brutal {
 
 struct Transform {
-    Vec3 position, rotation, scale;
+    Vec3 position;
+    Quat rotation;
+    Vec3 scale;
 };
 
 inline Transform transform_default() {
-    return {Vec3(0,0,0), Vec3(0,0,0), Vec3(1,1,1)};
+    return { Vec3(0, 0, 0), quat_identity(), Vec3(1, 1, 1) };
 }
 
 Mat4 transform_to_matrix(const Transform* t);

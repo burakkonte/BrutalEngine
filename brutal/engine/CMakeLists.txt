@@ -26,7 +26,7 @@ if (EXISTS "${CMAKE_CURRENT_LIST_DIR}/${FLASHLIGHT_SRC}")
 endif()
 
 if (NOT TARGET brutal_engine)
-    add_library(brutal_engine STATIC ${ENGINE_SOURCES} "public/brutal/world/flashlight.h")
+    add_library(brutal_engine STATIC ${ENGINE_SOURCES} "public/brutal/world/flashlight.h" "public/brutal/math/quat.h")
 endif()
 
 target_include_directories(brutal_engine

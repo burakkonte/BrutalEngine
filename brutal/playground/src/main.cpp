@@ -343,17 +343,17 @@ int main() {
             renderer_draw_mesh(&renderer, renderer_get_cube_mesh(&renderer), model, prop.color);
         }
 
-        if (editor.active && editor.selection_type != EditorState::SelectionType::None) {
+        if (editor.active && editor.selection_type != SelectionType::None) {
             const Vec3 outline_color(1.0f, 0.85f, 0.2f);
             const f32 outline_scale = 1.02f;
-            if (editor.selection_type == EditorState::SelectionType::Prop) {
+            if (editor.selection_type == SelectionType::Prop) {
                 const PropEntity& prop = scene.props[editor.selection_index];
                 if (prop.active) {
                     Mat4 model = transform_to_matrix(&prop.transform);
                     renderer_draw_mesh_outline(&renderer, renderer_get_cube_mesh(&renderer), model, outline_color, outline_scale);
                 }
             }
-            else if (editor.selection_type == EditorState::SelectionType::Brush) {
+            else if (editor.selection_type == SelectionType::Brush) {
                 const Brush& brush = scene.brushes[editor.selection_index];
                 AABB brush_aabb = brush_to_aabb(&brush);
                 Vec3 center = aabb_center(brush_aabb);
@@ -361,7 +361,7 @@ int main() {
                 Mat4 model = mat4_multiply(mat4_translation(center), mat4_scale(size));
                 renderer_draw_mesh_outline(&renderer, renderer_get_cube_mesh(&renderer), model, outline_color, outline_scale);
             }
-            else if (editor.selection_type == EditorState::SelectionType::Light) {
+            else if (editor.selection_type == SelectionType::Light) {
                 const PointLight& light = scene.lights.point_lights[editor.selection_index];
                 Mat4 model = mat4_multiply(mat4_translation(light.position), mat4_scale(Vec3(0.2f, 0.2f, 0.2f)));
                 renderer_draw_mesh_outline(&renderer, renderer_get_cube_mesh(&renderer), model, Vec3(1.0f, 0.9f, 0.4f), outline_scale);

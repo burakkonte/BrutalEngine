@@ -11,6 +11,8 @@ constexpr u32 MAX_SPOT_LIGHTS = 8;
 
 struct PointLight {
     Vec3 position;
+    Vec3 rotation;
+    Vec3 scale;
     f32 radius;
     Vec3 color;
     f32 intensity;
