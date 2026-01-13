@@ -34,3 +34,7 @@
 9	97	7899593851332114	engine/CMakeFiles/brutal_engine.dir/private/math/geometry.cpp.obj	9bc97a41d37d54f4
 97	182	7899593852219870	engine/brutal_engine.lib	87879e2ccc969e16
 182	379	7899593853062169	playground/playground.exe	ee10885f7a38a5b5
+14	541	7899664657585679	engine/CMakeFiles/brutal_engine.dir/private/core/memory.cpp.obj	537874106e35adf4
+23	551	7899664657676402	engine/CMakeFiles/brutal_engine.dir/private/math/geometry.cpp.obj	9bc97a41d37d54f4
+551	628	7899664662963762	engine/brutal_engine.lib	87879e2ccc969e16
+628	822	7899664663722986	playground/playground.exe	ee10885f7a38a5b5
