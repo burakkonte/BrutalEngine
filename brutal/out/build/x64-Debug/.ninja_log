@@ -70,3 +70,6 @@
 100	664	7900182749968938	engine/CMakeFiles/brutal_engine.dir/private/world/player.cpp.obj	588df1e6a4cdc84d
 68	823	7900182749639681	engine/CMakeFiles/brutal_engine.dir/private/core/platform_win32.cpp.obj	59d74a3683e34f36
 159	932	7900182750550239	playground/CMakeFiles/playground.dir/src/editor.cpp.obj	1cb1b655890d73f2
+57	169	7900184536194108	engine/brutal_engine.lib	4daa13bcbeba46c1
+75	314	7900184536380647	playground/CMakeFiles/playground.dir/src/main.cpp.obj	44e0526b119051b7
+314	649	7900184538766569	playground/playground.exe	ee10885f7a38a5b5

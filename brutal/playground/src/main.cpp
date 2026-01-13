@@ -403,6 +403,8 @@ int main() {
                             renderer_draw_mesh_outline(&renderer, renderer_get_cube_mesh(&renderer), model, outline_color, outline_scale);
                         }
                     }
+
+                }
                     
 
                 if (viewport.type == ViewportType::Perspective) {

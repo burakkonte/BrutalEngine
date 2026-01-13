@@ -1,95 +1,135 @@
 # Brutal Engine
 
-## 1) Project Overview
-Brutal Engine is a custom C++ game engine built specifically to power a single gothic FPS horror experience. It focuses on the exact needs of that game—tight first-person movement, moody lighting, and in-engine iteration—rather than competing with general-purpose engines.
+## Project overview
+Brutal Engine is a custom C++ game engine built to power a **single** gothic FPS horror game on Windows. It is not a general-purpose engine and intentionally focuses on the exact runtime/editor needs of that game rather than broad extensibility.
 
-## 2) Key Features
-**Engine**
-- Windows/OpenGL rendering pipeline with forward lighting and debug draw utilities.
-- Brush-based world geometry with collision and sweep/slide movement.
-- FPS controller with sprint, crouch, coyote time, and jump buffering.
-- Built-in debug overlays and lightweight profiling hooks.
+**Scope**
+- First-person gothic horror FPS runtime and in-engine editing for the included playground/demo.
 
-**Current Game/Demo**
-- Gothic house demo level with a central cross landmark.
-- Point/ambient lights tuned for a moody horror atmosphere.
-- In-editor scene editing with brushes, props, and lights.
+**Non-goals**
+- No general-purpose engine features, no broad extensibility, and no third-person or multiplayer focus (by design).
 
-## 3) Repo Structure
-```
-.
-├── brutal/                 # CMake project root
-│   ├── engine/             # Engine runtime (public headers + private implementation)
-│   ├── playground/         # Demo game (the gothic FPS slice)
-│   ├── third_party/        # External deps (e.g., glad)
-│   └── out/                # Generated build artifacts (if present)
-└── README_BUILD.md         # Original build notes
-```
+## Key features
+### Runtime (playground)
+- OpenGL renderer with lit/flat shaders, point/spot light support, and debug drawing utilities.
+- Brush-based world geometry and world mesh rebuilds from brushes.
+- AABB collision world with sweep/slide movement integration for the player controller.
+- FPS player controller with jump buffering, coyote time, crouch/sprint, and mouse look support.
+- Flashlight system integrated into the lighting environment.
+- Debug overlays (FPS, render stats, collision debug, console toggle, reload request).
 
-## 4) Build & Run (Windows + Visual Studio 2022 + CMake)
-From a Developer PowerShell or standard PowerShell:
+### Editor (in-game)
+- Built-in editor mode with multiple viewports, selection, and transform gizmos.
+- Scene save/load to `scene.json` in the working directory (brushes, props, lights).
+- Undo/redo stack for editor commands (transform and entity actions).
 
+## Screenshots / GIFs
+> Drop your images into this section.
+
+**Runtime**
+- `TODO: gameplay_screenshot.png`
+
+**Editor**
+- `TODO: editor_screenshot.png`
+
+## Build & run (Windows + CMake + Visual Studio)
+**Requirements**
+- Windows + Visual Studio 2022 (MSVC)
+- CMake 3.20+
+
+**Build (PowerShell)**
 ```powershell
-# 1) Go to the engine source
+# From the repository root
 cd brutal
 
-# 2) Configure
 cmake -S . -B build -G "Visual Studio 17 2022"
-
-# 3) Build (Release recommended)
 cmake --build build --config Release
+```
 
-# 4) Run the demo
+**Run the playground**
+```powershell
+# From brutal/
 .\build\Release\playground.exe
 ```
 
-> Tip: Visual Studio users can open the generated solution in `build/` and run the `playground` target (it is set as the startup project on MSVC).
+> Tip: Open the generated solution under `brutal/build/` in Visual Studio and run the `playground` target (it is set as the startup project on MSVC).
 
-## 5) Controls
-**Gameplay**
+## Controls
+### Gameplay
 - **W/A/S/D**: Move
-- **Mouse**: Look
+- **Mouse**: Look (click in the window to capture the mouse)
 - **Space**: Jump
 - **Ctrl (hold)**: Crouch
-- **Shift (hold)**: Sprint (forward only, while grounded)
-- **ESC**: Release mouse capture / quit
+- **Shift (hold)**: Sprint (forward + grounded)
+- **F**: Toggle flashlight
+- **Esc**: Release mouse capture or quit the app
 
-**Debug/Overlay Hotkeys**
-- **F1**: Main debug overlay
-- **F2**: Performance overlay
-- **F3**: Render stats
-- **F4**: Collision debug
-- **F5**: Reload request
-- **` (grave)**: Toggle console stub
+### Debug overlays
+- **F1**: Toggle main debug overlay
+- **F2**: Toggle performance overlay
+- **F3**: Toggle render stats
+- **F4**: Toggle collision debug overlay
+- **F5**: Request reload (currently logs only)
+- **` (grave)**: Toggle console overlay
 
-## 6) Editor Mode / Debug Tools
-Editor mode is available in the demo build.
+### Editor mode
+- **F9** or **P**: Toggle editor mode
+- **Right Mouse (hold)**: Free-look in the perspective viewport
+- **W/A/S/D**: Move camera (perspective)
+- **Space / Q**: Move up / down (perspective)
+- **Left Mouse**: Select; **Shift** adds to selection; drag to box-select
+- **W/E/R**: Translate / Rotate / Scale gizmos
+- **Q**: Clear gizmo mode
+- **G**: Toggle snapping
+- **L**: Toggle local/world space for gizmos
+- **Ctrl+S / Ctrl+O**: Save / Load `scene.json`
+- **Ctrl+Z / Shift+Ctrl+Z**: Undo / Redo
+- **Ctrl+Y**: Redo
+- **Ctrl+D**: Duplicate selection
+- **Delete**: Delete selection
+- **F**: Focus active viewport on selection
+- **Mouse wheel**: Zoom in orthographic views
+- **Middle/Right Mouse (hold)**: Pan in orthographic views
 
-- **Toggle Editor Mode**: **F9**
-- **Mouse Capture (Editor)**: Hold **Right Mouse** to freelook; release to unlock.
-- **Editor Movement**: **W/A/S/D** move, **Space** up, **Q** down.
-- **Selection**: **Left Click** to pick brushes/props/lights.
-- **Gizmos**: **W** Translate, **E** Rotate, **R** Scale.
-- **Scene Save/Load**: **Ctrl+S** / **Ctrl+O** (uses `scene.json` in the working directory).
+## Project structure
+```
+BrutalEngine/
+├── brutal/                  # CMake project root
+│   ├── engine/              # Engine runtime (public + private source)
+│   │   ├── public/           # Public headers
+│   │   ├── private/          # Implementation
+│   │   └── docs/             # Design docs (player controller, debugging)
+│   ├── playground/          # Demo game + in-engine editor
+│   │   └── src/              # Playground sources
+│   ├── third_party/         # External deps (glad)
+│   └── out/                 # Build artifacts (if present)
+└── README.md
+```
 
-Editor UI panels show hierarchy, inspector, asset spawn buttons, and top-bar save/load actions.
 
-## 7) Configuration / Tuning
-Movement and feel are tuned in code:
+## Tech overview (high level)
+- **Renderer**: OpenGL-based renderer with lit and flat shaders, point/spot lights, and debug draw helpers for lines/text overlays.
+- **Input & platform**: Win32-based platform layer with key/mouse state tracking, mouse capture, and window lifecycle control.
+- **Collision & movement**: AABB collision world with move-and-slide, used by the FPS player controller (coyote time + jump buffer logic).
+- **Editor system**: In-game editor with multi-viewport setup, picking, gizmos, undo/redo, and JSON save/load for brushes/props/lights.
 
-- **Player movement constants**: `brutal/engine/private/world/player.cpp`  
-  (walk/sprint/crouch speeds, gravity, jump velocity, mouse sensitivity, coyote time, jump buffer).
-- **Editor camera settings**: `brutal/playground/src/editor.cpp`  
-  (editor move speed, look sensitivity).
-- **Window resolution/title**: `brutal/playground/src/main.cpp`  
-  (initial window size and title).
+## Debugging / troubleshooting
+- **CMake errors about missing subdirectories**: Ensure the repository was fully extracted and that `brutal/third_party`, `brutal/engine`, and `brutal/playground` exist.
+- **No mouse look**: Click inside the game window to capture the mouse, or press **Esc** to release it if captured.
+- **Editor feels unresponsive to gameplay input**: Toggle editor mode off (F9 / P) to return to play input.
+- **Scene load/save not working**: The editor reads/writes `scene.json` in the working directory. Ensure the app has write permission there.
 
-## 8) Roadmap
-- Expand the gothic slice into multi-room traversal with streaming/serialization.
-- Add basic interaction and horror scripting triggers.
-- Improve lighting (shadows, light volumes) and post-processing.
-- Asset pipeline improvements for props and materials.
+## Roadmap
+Next milestones for the vertical-slice gameplay systems:
+- TODO: Expand the gothic demo into multi-room traversal (serialization/streaming as needed).
+- TODO: Add basic interaction and scripted horror triggers.
+- TODO: Improve lighting/shadows and post-processing.
+- TODO: Grow the prop/content pipeline.
 
-## 9) License + Credits
-**License**: TBD  
-**Credits**: Uses the `glad` OpenGL loader (see `brutal/third_party`).
+## Contributing
+- Keep changes aligned with the single-game focus and the player controller design docs in `brutal/engine/docs/`.
+- Prefer small, targeted PRs with clear testing notes.
+- If you modify controls or data formats, update this README.
+
+## License
+License not yet added. (A dedicated `LICENSE` file is required before external redistribution.)
