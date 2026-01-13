@@ -1,0 +1,17 @@
+.vs/
+**/.vs/
+ipch/
+.vscode/
+*.VC.db
+*.VC.VC.opendb
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+CMakeFiles/
+CMakeCache.txt
+cmake_install.cmake
+build/
+out/
+bin/
+obj/
