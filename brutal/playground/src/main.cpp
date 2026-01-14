@@ -14,7 +14,7 @@
 #include "brutal/world/scene.h"
 #include "brutal/world/player.h"
 #include "debug_system.h"
-#include "editor.h"
+#include "editor/Editor.h"
 #include <glad/glad.h>
 #include <cstdio>
 
@@ -232,7 +232,7 @@ int main() {
     DebugSystem debug_system = {};
     debug_system_init(&debug_system);
 
-    EditorState editor = {};
+    EditorContext editor = {};
     editor_init(&editor);
     
     // Main loop
@@ -262,12 +262,7 @@ int main() {
         if (platform_key_pressed(&platform.input, KEY_F9) || platform_key_pressed(&platform.input, KEY_P)) {
             bool next_active = !editor.active;
             editor_set_active(&editor, next_active, &platform, &player);
-            if (next_active) {
-                platform_disable_mouse_look(&platform);
-            }
-            else {
-                platform_enable_mouse_look(&platform);
-            }
+            
         }
 
         player_capture_input(&player, &platform.input, editor.active);
@@ -316,6 +311,8 @@ int main() {
         player_set_frame_info(&player, (f32)frame_dt, fixed_steps, fixed_steps);
 
         if (editor.active) {
+            editor_begin_frame(&editor, &platform);
+            editor_build_ui(&editor, &scene, &platform);
             editor_update(&editor, &scene, &platform, (f32)frame_dt);
         }
 
@@ -339,92 +336,7 @@ int main() {
         renderer_set_lights(&renderer, &scene.lights);
         
         if (editor.active) {
-            Viewport viewports[kEditorViewportCount] = {};
-            i32 viewport_count = 0;
-            editor_get_viewports(&editor, &platform, viewports, &viewport_count);
-            glEnable(GL_SCISSOR_TEST);
-
-            for (i32 i = 0; i < viewport_count; ++i) {
-                const Viewport& viewport = viewports[i];
-                
-                glViewport(viewport.rect.x, viewport.rect.y, viewport.rect.w, viewport.rect.h);
-                glScissor(viewport.rect.x, viewport.rect.y, viewport.rect.w, viewport.rect.h);
-                glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
-                f32 aspect = (f32)viewport.rect.w / (f32)viewport.rect.h;
-                Mat4 view = camera_view_matrix(&viewport.camera);
-                Mat4 proj = Mat4::identity();
-                if (viewport.type == ViewportType::Perspective) {
-                    proj = camera_projection_matrix(&viewport.camera, aspect);
-                }
-                else {
-                    f32 half_h = viewport.ortho_size;
-                    f32 half_w = viewport.ortho_size * aspect;
-                    proj = mat4_ortho(-half_w, half_w, -half_h, half_h, viewport.camera.near_plane, viewport.camera.far_plane);
-                }
-                renderer_set_camera_matrices(&renderer, view, proj, viewport.camera.position);
-
-                if (scene.world_mesh.vao) {
-                    renderer_draw_mesh(&renderer, &scene.world_mesh, Mat4::identity(), Vec3(1, 1, 1));
-                }
-
-                for (u32 p = 0; p < scene.prop_count; ++p) {
-                    const PropEntity& prop = scene.props[p];
-                    if (!prop.active) continue;
-                    Mat4 model = transform_to_matrix(&prop.transform);
-                    renderer_draw_mesh(&renderer, renderer_get_cube_mesh(&renderer), model, prop.color);
-                }
-                if (!editor.selected_entities.empty()) {
-                    const f32 outline_scale = 1.02f;
-                    for (const auto& item : editor.selected_entities) {
-                        bool primary = item.id == editor.selectedEntityId;
-                        Vec3 outline_color = primary ? Vec3(1.0f, 0.85f, 0.2f) : Vec3(0.7f, 0.7f, 1.0f);
-                        if (item.type == SelectionType::Prop) {
-                            if (item.index >= scene.prop_count) continue;
-                            const PropEntity& prop = scene.props[item.index];
-                            if (prop.active) {
-                                Mat4 model = transform_to_matrix(&prop.transform);
-                                renderer_draw_mesh_outline(&renderer, renderer_get_cube_mesh(&renderer), model, outline_color, outline_scale);
-                            }
-                        }
-                        else if (item.type == SelectionType::Brush) {
-                            if (item.index >= scene.brush_count) continue;
-                            const Brush& brush = scene.brushes[item.index];
-                            AABB brush_aabb = brush_to_aabb(&brush);
-                            Vec3 center = aabb_center(brush_aabb);
-                            Vec3 size = aabb_half_size(brush_aabb) * 2.0f;
-                            Mat4 model = mat4_multiply(mat4_translation(center), mat4_scale(size));
-                            renderer_draw_mesh_outline(&renderer, renderer_get_cube_mesh(&renderer), model, outline_color, outline_scale);
-                        }
-                        else if (item.type == SelectionType::Light) {
-                            if (item.index >= scene.lights.point_light_count) continue;
-                            const PointLight& light = scene.lights.point_lights[item.index];
-                            Mat4 model = mat4_multiply(mat4_translation(light.position), mat4_scale(Vec3(0.2f, 0.2f, 0.2f)));
-                            renderer_draw_mesh_outline(&renderer, renderer_get_cube_mesh(&renderer), model, outline_color, outline_scale);
-                        }
-                    }
-
-                }
-                    
-
-                if (viewport.type == ViewportType::Perspective) {
-                    if (editor.show_grid) {
-                        renderer_draw_grid(&renderer);
-                    }
-                }
-                else {
-                    editor_draw_ortho_grid(&editor, viewport);
-                }
-
-                if (viewport.isActive && editor.selection_type != SelectionType::None) {
-                    editor_draw_gizmo(&editor, &scene, viewport);
-                }
-
-                editor_draw_selection_bounds(&editor, &scene);
-                debug_lines_flush_matrix(view, proj);
-            }
-            glDisable(GL_SCISSOR_TEST);
-            glViewport(0, 0, platform.window_width, platform.window_height);
+            editor_render_scene(&editor, &scene, &renderer);
         }
         else {
             renderer_set_camera(&renderer, &player.camera);
@@ -446,34 +358,10 @@ int main() {
         frame_info.fps = (frame_dt > 0.0) ? (f32)(1.0 / frame_dt) : 0.0f;
         debug_system_draw(&debug_system, frame_info, &platform.input, &platform, &player, &renderer, &scene.collision,
             platform.window_width, platform.window_height);
-        if (editor.active) {
-            editor_draw_ui(&editor, &scene, &platform);
-        }
+        
         if (debug_system_show_collision(&debug_system)) {
             if (editor.active) {
-                Viewport viewports[kEditorViewportCount] = {};
-                i32 viewport_count = 0;
-                editor_get_viewports(&editor, &platform, viewports, &viewport_count);
-                Viewport active_viewport = viewports[0];
-                for (i32 i = 0; i < viewport_count; ++i) {
-                    if (viewports[i].isActive) {
-                        active_viewport = viewports[i];
-                        break;
-                    }
-                }
-                glEnable(GL_SCISSOR_TEST);
-                glViewport(active_viewport.rect.x, active_viewport.rect.y, active_viewport.rect.w, active_viewport.rect.h);
-                glScissor(active_viewport.rect.x, active_viewport.rect.y, active_viewport.rect.w, active_viewport.rect.h);
-                f32 aspect = (f32)active_viewport.rect.w / (f32)active_viewport.rect.h;
-                Mat4 view = camera_view_matrix(&active_viewport.camera);
-                Mat4 proj = (active_viewport.type == ViewportType::Perspective)
-                    ? camera_projection_matrix(&active_viewport.camera, aspect)
-                    : mat4_ortho(-active_viewport.ortho_size * aspect, active_viewport.ortho_size * aspect,
-                        -active_viewport.ortho_size, active_viewport.ortho_size,
-                        active_viewport.camera.near_plane, active_viewport.camera.far_plane);
-                debug_lines_flush_matrix(view, proj);
-                glDisable(GL_SCISSOR_TEST);
-                glViewport(0, 0, platform.window_width, platform.window_height);
+                debug_lines_flush(&editor.camera, platform.window_width, platform.window_height);
             }
             else {
                 debug_lines_flush(&player.camera, platform.window_width, platform.window_height);
@@ -485,6 +373,10 @@ int main() {
         debug_text_flush(platform.window_width, platform.window_height);
 
         profiler_end_frame();
+
+        if (editor.active) {
+            editor_end_frame(&editor);
+        }
         
         renderer_end_frame();
         platform_swap_buffers(&platform);
@@ -493,6 +385,7 @@ int main() {
     // Cleanup
     profiler_shutdown();
     debug_draw_shutdown();
+    editor_shutdown(&editor);
     scene_destroy(&scene);
     renderer_shutdown(&renderer);
     arena_shutdown(&arena);
