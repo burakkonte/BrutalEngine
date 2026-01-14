@@ -424,8 +424,11 @@ namespace brutal {
             return false;
         }
 
-        bool ui_wants_capture(const EditorState* editor) {
-            return editor->ui_active_id != 0;
+        bool ui_wants_capture(const EditorState* editor, const InputState* input) {
+            if (editor->ui_active_id == 0) {
+                return false;
+            }
+            return input->mouse.left.down;
         }
 
         void ui_begin(EditorState* editor) {
@@ -1627,7 +1630,7 @@ namespace brutal {
             Vec3 pivot = editor_get_selected_pivot(editor, scene);
 
             f32 scale = editor_gizmo_scale(viewport, pivot);
-            bool ui_capture = ui_wants_capture(editor);
+            bool ui_capture = ui_wants_capture(editor, input);
             bool shift_down = platform_key_down(input, KEY_SHIFT);
 
             if (editor->gizmo_drag_active) {
@@ -1970,7 +1973,7 @@ namespace brutal {
                 snprintf(label, sizeof(label), "  Prop %u", i);
                 bool clicked = ui_button(editor, input, 2000 + (i32)i, x, y, kHierarchyWidth, label);
                 if (clicked) {
-                    editor_select_single(editor, SelectionType::Light, i);
+                    editor_select_single(editor, SelectionType::Prop, i);
                 }
                 y += kLineHeight;
             }
@@ -2259,6 +2262,8 @@ namespace brutal {
         if (editor->active != active) {
             editor_cancel_active_sessions(editor);
             editor->box_select_active = false;
+            editor->gizmo_axis_hot = EditorState::GizmoAxis::None;
+            editor->gizmo_axis_active = EditorState::GizmoAxis::None;
             editor->ui_active_id = 0;
             editor->ui_hot_id = 0;
         }
@@ -2278,7 +2283,7 @@ namespace brutal {
         Viewport viewports[kEditorViewportCount] = {};
         i32 viewport_count = 0;
         editor_build_viewports(editor, platform, viewports, &viewport_count);
-        bool ui_keyboard_capture = ui_wants_capture(editor);
+        bool ui_keyboard_capture = ui_wants_capture(editor, input);
 
         if (!ui_keyboard_capture && platform_key_pressed(input, KEY_Q)) {
             editor->gizmo_mode = EditorState::GizmoMode::None;
@@ -2383,7 +2388,7 @@ namespace brutal {
             editor_delete_selected(editor, scene);
         }
 
-        if (input->mouse.left.pressed && !mouse_over_ui(platform) && !ui_wants_capture(editor)) {
+        if (input->mouse.left.pressed && !mouse_over_ui(platform) && !ui_wants_capture(editor, input)) {
             for (i32 i = 0; i < viewport_count; ++i) {
                 if (viewports[i].isHovered) {
                     editor->activeViewportId = viewports[i].id;
@@ -2407,7 +2412,7 @@ namespace brutal {
             }
         }
 
-        bool ui_capture = ui_wants_capture(editor);
+        bool ui_capture = ui_wants_capture(editor, input);
         if (active_viewport->type != ViewportType::Perspective && platform->mouse_captured) {
             platform_set_mouse_capture(platform, false);
         }
@@ -2556,13 +2561,18 @@ namespace brutal {
             }
         }
 
-        debug_text_printf(kPanelPadding, platform->window_height - kAssetsHeight - kLineHeight * 5,
+        bool selected_valid = editor_transform_target_valid(scene, editor->selection_type, editor->selection_index);
+        bool want_capture = ui_wants_capture(editor, &platform->input);
+        debug_text_printf(kPanelPadding, platform->window_height - kAssetsHeight - kLineHeight * 6,
             Vec3(0.7f, 0.7f, 0.7f), "Mode: %s", editor->active ? "Editor" : "Play");
-        debug_text_printf(kPanelPadding, platform->window_height - kAssetsHeight - kLineHeight * 4,
+        debug_text_printf(kPanelPadding, platform->window_height - kAssetsHeight - kLineHeight * 5,
             Vec3(0.7f, 0.7f, 0.7f), "Viewport: %d  Hovered: %d", editor->activeViewportId, hovered_viewport_id);
 
+        debug_text_printf(kPanelPadding, platform->window_height - kAssetsHeight - kLineHeight * 4,
+            Vec3(0.7f, 0.7f, 0.7f), "Selected: %d  Valid: %d", editor->selectedEntityId, selected_valid ? 1 : 0);
+
         debug_text_printf(kPanelPadding, platform->window_height - kAssetsHeight - kLineHeight * 3,
-            Vec3(0.7f, 0.7f, 0.7f), "UI Capture: Mouse %d  Keyboard %d", ui_wants_capture(editor) ? 1 : 0, ui_wants_capture(editor) ? 1 : 0);
+            Vec3(0.7f, 0.7f, 0.7f), "UI Capture: Mouse %d  Keyboard %d", want_capture ? 1 : 0, want_capture ? 1 : 0);
         const char* mode_text = "None";
         if (editor->gizmo_mode == EditorState::GizmoMode::Translate) mode_text = "Translate";
         else if (editor->gizmo_mode == EditorState::GizmoMode::Rotate) mode_text = "Rotate";
