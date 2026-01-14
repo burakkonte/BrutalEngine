@@ -79,6 +79,15 @@ PFNGLBUFFERDATAPROC glBufferData = NULL;
 PFNGLBUFFERSUBDATAPROC glBufferSubData = NULL;
 PFNGLENABLEVERTEXATTRIBARRAYPROC glEnableVertexAttribArray = NULL;
 PFNGLVERTEXATTRIBPOINTERPROC glVertexAttribPointer = NULL;
+PFNGLGENFRAMEBUFFERSPROC glGenFramebuffers = NULL;
+PFNGLDELETEFRAMEBUFFERSPROC glDeleteFramebuffers = NULL;
+PFNGLBINDFRAMEBUFFERPROC glBindFramebuffer = NULL;
+PFNGLFRAMEBUFFERTEXTURE2DPROC glFramebufferTexture2D = NULL;
+PFNGLGENRENDERBUFFERSPROC glGenRenderbuffers = NULL;
+PFNGLDELETERENDERBUFFERSPROC glDeleteRenderbuffers = NULL;
+PFNGLBINDRENDERBUFFERPROC glBindRenderbuffer = NULL;
+PFNGLRENDERBUFFERSTORAGEPROC glRenderbufferStorage = NULL;
+PFNGLFRAMEBUFFERRENDERBUFFERPROC glFramebufferRenderbuffer = NULL;
 
 int gladLoadGL(void) {
     glClearColor = (PFNGLCLEARCOLORPROC)get_proc("glClearColor");
@@ -132,6 +141,15 @@ int gladLoadGL(void) {
     glBufferSubData = (PFNGLBUFFERSUBDATAPROC)get_proc("glBufferSubData");
     glEnableVertexAttribArray = (PFNGLENABLEVERTEXATTRIBARRAYPROC)get_proc("glEnableVertexAttribArray");
     glVertexAttribPointer = (PFNGLVERTEXATTRIBPOINTERPROC)get_proc("glVertexAttribPointer");
+    glGenFramebuffers = (PFNGLGENFRAMEBUFFERSPROC)get_proc("glGenFramebuffers");
+    glDeleteFramebuffers = (PFNGLDELETEFRAMEBUFFERSPROC)get_proc("glDeleteFramebuffers");
+    glBindFramebuffer = (PFNGLBINDFRAMEBUFFERPROC)get_proc("glBindFramebuffer");
+    glFramebufferTexture2D = (PFNGLFRAMEBUFFERTEXTURE2DPROC)get_proc("glFramebufferTexture2D");
+    glGenRenderbuffers = (PFNGLGENRENDERBUFFERSPROC)get_proc("glGenRenderbuffers");
+    glDeleteRenderbuffers = (PFNGLDELETERENDERBUFFERSPROC)get_proc("glDeleteRenderbuffers");
+    glBindRenderbuffer = (PFNGLBINDRENDERBUFFERPROC)get_proc("glBindRenderbuffer");
+    glRenderbufferStorage = (PFNGLRENDERBUFFERSTORAGEPROC)get_proc("glRenderbufferStorage");
+    glFramebufferRenderbuffer = (PFNGLFRAMEBUFFERRENDERBUFFERPROC)get_proc("glFramebufferRenderbuffer");
 
     // Check if core functions loaded
     return (glClear != NULL && glCreateShader != NULL && glGenVertexArrays != NULL) ? 1 : 0;

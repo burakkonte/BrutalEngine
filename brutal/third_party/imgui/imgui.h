@@ -10,7 +10,7 @@ struct ImVec2 {
 
 using ImGuiID = unsigned int;
 using ImTextureID = void*;
-
+using ImGuiWindowFlags = int;
 struct ImGuiViewport {
     ImVec2 Pos;
     ImVec2 Size;

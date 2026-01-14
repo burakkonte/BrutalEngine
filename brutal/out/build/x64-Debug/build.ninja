@@ -68,6 +68,92 @@ build rebuild_cache: phony CMakeFiles\rebuild_cache.util
 # C:/Users/su-ko/Downloads/brutal_engine/brutal/CMakeLists.txt
 # =============================================================================
 
+# =============================================================================
+# Object build statements for STATIC_LIBRARY target imgui
+
+
+#############################################
+# Order-only phony target for imgui
+
+build cmake_object_order_depends_target_imgui: phony || .
+
+build third_party\CMakeFiles\imgui.dir\imgui\imgui.cpp.obj: CXX_COMPILER__imgui_unscanned_Debug C$:\Users\su-ko\Downloads\brutal_engine\brutal\third_party\imgui\imgui.cpp || cmake_object_order_depends_target_imgui
+  FLAGS = /DWIN32 /D_WINDOWS /EHsc /Zi /Ob0 /Od /RTC1 -MDd
+  INCLUDES = -IC:\Users\su-ko\Downloads\brutal_engine\brutal\third_party\imgui -IC:\Users\su-ko\Downloads\brutal_engine\brutal\third_party\imgui\backends
+  OBJECT_DIR = third_party\CMakeFiles\imgui.dir
+  OBJECT_FILE_DIR = third_party\CMakeFiles\imgui.dir\imgui
+  TARGET_COMPILE_PDB = third_party\CMakeFiles\imgui.dir\imgui.pdb
+  TARGET_PDB = third_party\imgui.pdb
+
+build third_party\CMakeFiles\imgui.dir\imgui\backends\imgui_impl_win32.cpp.obj: CXX_COMPILER__imgui_unscanned_Debug C$:\Users\su-ko\Downloads\brutal_engine\brutal\third_party\imgui\backends\imgui_impl_win32.cpp || cmake_object_order_depends_target_imgui
+  FLAGS = /DWIN32 /D_WINDOWS /EHsc /Zi /Ob0 /Od /RTC1 -MDd
+  INCLUDES = -IC:\Users\su-ko\Downloads\brutal_engine\brutal\third_party\imgui -IC:\Users\su-ko\Downloads\brutal_engine\brutal\third_party\imgui\backends
+  OBJECT_DIR = third_party\CMakeFiles\imgui.dir
+  OBJECT_FILE_DIR = third_party\CMakeFiles\imgui.dir\imgui\backends
+  TARGET_COMPILE_PDB = third_party\CMakeFiles\imgui.dir\imgui.pdb
+  TARGET_PDB = third_party\imgui.pdb
+
+build third_party\CMakeFiles\imgui.dir\imgui\backends\imgui_impl_opengl3.cpp.obj: CXX_COMPILER__imgui_unscanned_Debug C$:\Users\su-ko\Downloads\brutal_engine\brutal\third_party\imgui\backends\imgui_impl_opengl3.cpp || cmake_object_order_depends_target_imgui
+  FLAGS = /DWIN32 /D_WINDOWS /EHsc /Zi /Ob0 /Od /RTC1 -MDd
+  INCLUDES = -IC:\Users\su-ko\Downloads\brutal_engine\brutal\third_party\imgui -IC:\Users\su-ko\Downloads\brutal_engine\brutal\third_party\imgui\backends
+  OBJECT_DIR = third_party\CMakeFiles\imgui.dir
+  OBJECT_FILE_DIR = third_party\CMakeFiles\imgui.dir\imgui\backends
+  TARGET_COMPILE_PDB = third_party\CMakeFiles\imgui.dir\imgui.pdb
+  TARGET_PDB = third_party\imgui.pdb
+
+
+# =============================================================================
+# Link build statements for STATIC_LIBRARY target imgui
+
+
+#############################################
+# Link the static library third_party\imgui.lib
+
+build third_party\imgui.lib: CXX_STATIC_LIBRARY_LINKER__imgui_Debug third_party\CMakeFiles\imgui.dir\imgui\imgui.cpp.obj third_party\CMakeFiles\imgui.dir\imgui\backends\imgui_impl_win32.cpp.obj third_party\CMakeFiles\imgui.dir\imgui\backends\imgui_impl_opengl3.cpp.obj
+  LANGUAGE_COMPILE_FLAGS = /DWIN32 /D_WINDOWS /EHsc /Zi /Ob0 /Od /RTC1 -MDd
+  LINK_FLAGS = /machine:x64
+  OBJECT_DIR = third_party\CMakeFiles\imgui.dir
+  POST_BUILD = cd .
+  PRE_LINK = cd .
+  TARGET_COMPILE_PDB = third_party\CMakeFiles\imgui.dir\imgui.pdb
+  TARGET_FILE = third_party\imgui.lib
+  TARGET_PDB = third_party\imgui.pdb
+
+# =============================================================================
+# Object build statements for STATIC_LIBRARY target imguizmo
+
+
+#############################################
+# Order-only phony target for imguizmo
+
+build cmake_object_order_depends_target_imguizmo: phony || .
+
+build third_party\CMakeFiles\imguizmo.dir\ImGuizmo\ImGuizmo.cpp.obj: CXX_COMPILER__imguizmo_unscanned_Debug C$:\Users\su-ko\Downloads\brutal_engine\brutal\third_party\ImGuizmo\ImGuizmo.cpp || cmake_object_order_depends_target_imguizmo
+  FLAGS = /DWIN32 /D_WINDOWS /EHsc /Zi /Ob0 /Od /RTC1 -MDd
+  INCLUDES = -IC:\Users\su-ko\Downloads\brutal_engine\brutal\third_party\ImGuizmo
+  OBJECT_DIR = third_party\CMakeFiles\imguizmo.dir
+  OBJECT_FILE_DIR = third_party\CMakeFiles\imguizmo.dir\ImGuizmo
+  TARGET_COMPILE_PDB = third_party\CMakeFiles\imguizmo.dir\imguizmo.pdb
+  TARGET_PDB = third_party\imguizmo.pdb
+
+
+# =============================================================================
+# Link build statements for STATIC_LIBRARY target imguizmo
+
+
+#############################################
+# Link the static library third_party\imguizmo.lib
+
+build third_party\imguizmo.lib: CXX_STATIC_LIBRARY_LINKER__imguizmo_Debug third_party\CMakeFiles\imguizmo.dir\ImGuizmo\ImGuizmo.cpp.obj
+  LANGUAGE_COMPILE_FLAGS = /DWIN32 /D_WINDOWS /EHsc /Zi /Ob0 /Od /RTC1 -MDd
+  LINK_FLAGS = /machine:x64
+  OBJECT_DIR = third_party\CMakeFiles\imguizmo.dir
+  POST_BUILD = cd .
+  PRE_LINK = cd .
+  TARGET_COMPILE_PDB = third_party\CMakeFiles\imguizmo.dir\imguizmo.pdb
+  TARGET_FILE = third_party\imguizmo.lib
+  TARGET_PDB = third_party\imguizmo.pdb
+
 
 #############################################
 # Utility command for edit_cache
@@ -401,12 +487,12 @@ build engine\rebuild_cache: phony engine\CMakeFiles\rebuild_cache.util
 #############################################
 # Order-only phony target for playground
 
-build cmake_object_order_depends_target_playground: phony || cmake_object_order_depends_target_brutal_engine cmake_object_order_depends_target_glad
+build cmake_object_order_depends_target_playground: phony || cmake_object_order_depends_target_brutal_engine cmake_object_order_depends_target_glad cmake_object_order_depends_target_imgui cmake_object_order_depends_target_imguizmo
 
 build playground\CMakeFiles\playground.dir\src\main.cpp.obj: CXX_COMPILER__playground_unscanned_Debug C$:\Users\su-ko\Downloads\brutal_engine\brutal\playground\src\main.cpp || cmake_object_order_depends_target_playground
   DEFINES = -DBRUTAL_ENABLE_PROFILER=1
   FLAGS = /DWIN32 /D_WINDOWS /EHsc /Zi /Ob0 /Od /RTC1 -MDd
-  INCLUDES = -IC:\Users\su-ko\Downloads\brutal_engine\brutal\engine\public -IC:\Users\su-ko\Downloads\brutal_engine\brutal\third_party\glad\include
+  INCLUDES = -IC:\Users\su-ko\Downloads\brutal_engine\brutal\playground\src -IC:\Users\su-ko\Downloads\brutal_engine\brutal\playground -IC:\Users\su-ko\Downloads\brutal_engine\brutal\engine\public -IC:\Users\su-ko\Downloads\brutal_engine\brutal\third_party\glad\include -IC:\Users\su-ko\Downloads\brutal_engine\brutal\third_party\imgui -IC:\Users\su-ko\Downloads\brutal_engine\brutal\third_party\imgui\backends -IC:\Users\su-ko\Downloads\brutal_engine\brutal\third_party\ImGuizmo
   OBJECT_DIR = playground\CMakeFiles\playground.dir
   OBJECT_FILE_DIR = playground\CMakeFiles\playground.dir\src
   TARGET_COMPILE_PDB = playground\CMakeFiles\playground.dir\
@@ -415,18 +501,108 @@ build playground\CMakeFiles\playground.dir\src\main.cpp.obj: CXX_COMPILER__playg
 build playground\CMakeFiles\playground.dir\src\debug_system.cpp.obj: CXX_COMPILER__playground_unscanned_Debug C$:\Users\su-ko\Downloads\brutal_engine\brutal\playground\src\debug_system.cpp || cmake_object_order_depends_target_playground
   DEFINES = -DBRUTAL_ENABLE_PROFILER=1
   FLAGS = /DWIN32 /D_WINDOWS /EHsc /Zi /Ob0 /Od /RTC1 -MDd
-  INCLUDES = -IC:\Users\su-ko\Downloads\brutal_engine\brutal\engine\public -IC:\Users\su-ko\Downloads\brutal_engine\brutal\third_party\glad\include
+  INCLUDES = -IC:\Users\su-ko\Downloads\brutal_engine\brutal\playground\src -IC:\Users\su-ko\Downloads\brutal_engine\brutal\playground -IC:\Users\su-ko\Downloads\brutal_engine\brutal\engine\public -IC:\Users\su-ko\Downloads\brutal_engine\brutal\third_party\glad\include -IC:\Users\su-ko\Downloads\brutal_engine\brutal\third_party\imgui -IC:\Users\su-ko\Downloads\brutal_engine\brutal\third_party\imgui\backends -IC:\Users\su-ko\Downloads\brutal_engine\brutal\third_party\ImGuizmo
   OBJECT_DIR = playground\CMakeFiles\playground.dir
   OBJECT_FILE_DIR = playground\CMakeFiles\playground.dir\src
   TARGET_COMPILE_PDB = playground\CMakeFiles\playground.dir\
   TARGET_PDB = playground\playground.pdb
 
-build playground\CMakeFiles\playground.dir\src\editor.cpp.obj: CXX_COMPILER__playground_unscanned_Debug C$:\Users\su-ko\Downloads\brutal_engine\brutal\playground\src\editor.cpp || cmake_object_order_depends_target_playground
+build playground\CMakeFiles\playground.dir\src\editor\Editor.cpp.obj: CXX_COMPILER__playground_unscanned_Debug C$:\Users\su-ko\Downloads\brutal_engine\brutal\playground\src\editor\Editor.cpp || cmake_object_order_depends_target_playground
   DEFINES = -DBRUTAL_ENABLE_PROFILER=1
   FLAGS = /DWIN32 /D_WINDOWS /EHsc /Zi /Ob0 /Od /RTC1 -MDd
-  INCLUDES = -IC:\Users\su-ko\Downloads\brutal_engine\brutal\engine\public -IC:\Users\su-ko\Downloads\brutal_engine\brutal\third_party\glad\include
+  INCLUDES = -IC:\Users\su-ko\Downloads\brutal_engine\brutal\playground\src -IC:\Users\su-ko\Downloads\brutal_engine\brutal\playground -IC:\Users\su-ko\Downloads\brutal_engine\brutal\engine\public -IC:\Users\su-ko\Downloads\brutal_engine\brutal\third_party\glad\include -IC:\Users\su-ko\Downloads\brutal_engine\brutal\third_party\imgui -IC:\Users\su-ko\Downloads\brutal_engine\brutal\third_party\imgui\backends -IC:\Users\su-ko\Downloads\brutal_engine\brutal\third_party\ImGuizmo
   OBJECT_DIR = playground\CMakeFiles\playground.dir
-  OBJECT_FILE_DIR = playground\CMakeFiles\playground.dir\src
+  OBJECT_FILE_DIR = playground\CMakeFiles\playground.dir\src\editor
+  TARGET_COMPILE_PDB = playground\CMakeFiles\playground.dir\
+  TARGET_PDB = playground\playground.pdb
+
+build playground\CMakeFiles\playground.dir\src\editor\Editor_camera.cpp.obj: CXX_COMPILER__playground_unscanned_Debug C$:\Users\su-ko\Downloads\brutal_engine\brutal\playground\src\editor\Editor_camera.cpp || cmake_object_order_depends_target_playground
+  DEFINES = -DBRUTAL_ENABLE_PROFILER=1
+  FLAGS = /DWIN32 /D_WINDOWS /EHsc /Zi /Ob0 /Od /RTC1 -MDd
+  INCLUDES = -IC:\Users\su-ko\Downloads\brutal_engine\brutal\playground\src -IC:\Users\su-ko\Downloads\brutal_engine\brutal\playground -IC:\Users\su-ko\Downloads\brutal_engine\brutal\engine\public -IC:\Users\su-ko\Downloads\brutal_engine\brutal\third_party\glad\include -IC:\Users\su-ko\Downloads\brutal_engine\brutal\third_party\imgui -IC:\Users\su-ko\Downloads\brutal_engine\brutal\third_party\imgui\backends -IC:\Users\su-ko\Downloads\brutal_engine\brutal\third_party\ImGuizmo
+  OBJECT_DIR = playground\CMakeFiles\playground.dir
+  OBJECT_FILE_DIR = playground\CMakeFiles\playground.dir\src\editor
+  TARGET_COMPILE_PDB = playground\CMakeFiles\playground.dir\
+  TARGET_PDB = playground\playground.pdb
+
+build playground\CMakeFiles\playground.dir\src\editor\Editor_cursor.cpp.obj: CXX_COMPILER__playground_unscanned_Debug C$:\Users\su-ko\Downloads\brutal_engine\brutal\playground\src\editor\Editor_cursor.cpp || cmake_object_order_depends_target_playground
+  DEFINES = -DBRUTAL_ENABLE_PROFILER=1
+  FLAGS = /DWIN32 /D_WINDOWS /EHsc /Zi /Ob0 /Od /RTC1 -MDd
+  INCLUDES = -IC:\Users\su-ko\Downloads\brutal_engine\brutal\playground\src -IC:\Users\su-ko\Downloads\brutal_engine\brutal\playground -IC:\Users\su-ko\Downloads\brutal_engine\brutal\engine\public -IC:\Users\su-ko\Downloads\brutal_engine\brutal\third_party\glad\include -IC:\Users\su-ko\Downloads\brutal_engine\brutal\third_party\imgui -IC:\Users\su-ko\Downloads\brutal_engine\brutal\third_party\imgui\backends -IC:\Users\su-ko\Downloads\brutal_engine\brutal\third_party\ImGuizmo
+  OBJECT_DIR = playground\CMakeFiles\playground.dir
+  OBJECT_FILE_DIR = playground\CMakeFiles\playground.dir\src\editor
+  TARGET_COMPILE_PDB = playground\CMakeFiles\playground.dir\
+  TARGET_PDB = playground\playground.pdb
+
+build playground\CMakeFiles\playground.dir\src\editor\Editor_dockspace.cpp.obj: CXX_COMPILER__playground_unscanned_Debug C$:\Users\su-ko\Downloads\brutal_engine\brutal\playground\src\editor\Editor_dockspace.cpp || cmake_object_order_depends_target_playground
+  DEFINES = -DBRUTAL_ENABLE_PROFILER=1
+  FLAGS = /DWIN32 /D_WINDOWS /EHsc /Zi /Ob0 /Od /RTC1 -MDd
+  INCLUDES = -IC:\Users\su-ko\Downloads\brutal_engine\brutal\playground\src -IC:\Users\su-ko\Downloads\brutal_engine\brutal\playground -IC:\Users\su-ko\Downloads\brutal_engine\brutal\engine\public -IC:\Users\su-ko\Downloads\brutal_engine\brutal\third_party\glad\include -IC:\Users\su-ko\Downloads\brutal_engine\brutal\third_party\imgui -IC:\Users\su-ko\Downloads\brutal_engine\brutal\third_party\imgui\backends -IC:\Users\su-ko\Downloads\brutal_engine\brutal\third_party\ImGuizmo
+  OBJECT_DIR = playground\CMakeFiles\playground.dir
+  OBJECT_FILE_DIR = playground\CMakeFiles\playground.dir\src\editor
+  TARGET_COMPILE_PDB = playground\CMakeFiles\playground.dir\
+  TARGET_PDB = playground\playground.pdb
+
+build playground\CMakeFiles\playground.dir\src\editor\Editor_gizmo.cpp.obj: CXX_COMPILER__playground_unscanned_Debug C$:\Users\su-ko\Downloads\brutal_engine\brutal\playground\src\editor\Editor_gizmo.cpp || cmake_object_order_depends_target_playground
+  DEFINES = -DBRUTAL_ENABLE_PROFILER=1
+  FLAGS = /DWIN32 /D_WINDOWS /EHsc /Zi /Ob0 /Od /RTC1 -MDd
+  INCLUDES = -IC:\Users\su-ko\Downloads\brutal_engine\brutal\playground\src -IC:\Users\su-ko\Downloads\brutal_engine\brutal\playground -IC:\Users\su-ko\Downloads\brutal_engine\brutal\engine\public -IC:\Users\su-ko\Downloads\brutal_engine\brutal\third_party\glad\include -IC:\Users\su-ko\Downloads\brutal_engine\brutal\third_party\imgui -IC:\Users\su-ko\Downloads\brutal_engine\brutal\third_party\imgui\backends -IC:\Users\su-ko\Downloads\brutal_engine\brutal\third_party\ImGuizmo
+  OBJECT_DIR = playground\CMakeFiles\playground.dir
+  OBJECT_FILE_DIR = playground\CMakeFiles\playground.dir\src\editor
+  TARGET_COMPILE_PDB = playground\CMakeFiles\playground.dir\
+  TARGET_PDB = playground\playground.pdb
+
+build playground\CMakeFiles\playground.dir\src\editor\Editor_input.cpp.obj: CXX_COMPILER__playground_unscanned_Debug C$:\Users\su-ko\Downloads\brutal_engine\brutal\playground\src\editor\Editor_input.cpp || cmake_object_order_depends_target_playground
+  DEFINES = -DBRUTAL_ENABLE_PROFILER=1
+  FLAGS = /DWIN32 /D_WINDOWS /EHsc /Zi /Ob0 /Od /RTC1 -MDd
+  INCLUDES = -IC:\Users\su-ko\Downloads\brutal_engine\brutal\playground\src -IC:\Users\su-ko\Downloads\brutal_engine\brutal\playground -IC:\Users\su-ko\Downloads\brutal_engine\brutal\engine\public -IC:\Users\su-ko\Downloads\brutal_engine\brutal\third_party\glad\include -IC:\Users\su-ko\Downloads\brutal_engine\brutal\third_party\imgui -IC:\Users\su-ko\Downloads\brutal_engine\brutal\third_party\imgui\backends -IC:\Users\su-ko\Downloads\brutal_engine\brutal\third_party\ImGuizmo
+  OBJECT_DIR = playground\CMakeFiles\playground.dir
+  OBJECT_FILE_DIR = playground\CMakeFiles\playground.dir\src\editor
+  TARGET_COMPILE_PDB = playground\CMakeFiles\playground.dir\
+  TARGET_PDB = playground\playground.pdb
+
+build playground\CMakeFiles\playground.dir\src\editor\Editor_viewport.cpp.obj: CXX_COMPILER__playground_unscanned_Debug C$:\Users\su-ko\Downloads\brutal_engine\brutal\playground\src\editor\Editor_viewport.cpp || cmake_object_order_depends_target_playground
+  DEFINES = -DBRUTAL_ENABLE_PROFILER=1
+  FLAGS = /DWIN32 /D_WINDOWS /EHsc /Zi /Ob0 /Od /RTC1 -MDd
+  INCLUDES = -IC:\Users\su-ko\Downloads\brutal_engine\brutal\playground\src -IC:\Users\su-ko\Downloads\brutal_engine\brutal\playground -IC:\Users\su-ko\Downloads\brutal_engine\brutal\engine\public -IC:\Users\su-ko\Downloads\brutal_engine\brutal\third_party\glad\include -IC:\Users\su-ko\Downloads\brutal_engine\brutal\third_party\imgui -IC:\Users\su-ko\Downloads\brutal_engine\brutal\third_party\imgui\backends -IC:\Users\su-ko\Downloads\brutal_engine\brutal\third_party\ImGuizmo
+  OBJECT_DIR = playground\CMakeFiles\playground.dir
+  OBJECT_FILE_DIR = playground\CMakeFiles\playground.dir\src\editor
+  TARGET_COMPILE_PDB = playground\CMakeFiles\playground.dir\
+  TARGET_PDB = playground\playground.pdb
+
+build playground\CMakeFiles\playground.dir\src\editor\Panels\Panel_console.cpp.obj: CXX_COMPILER__playground_unscanned_Debug C$:\Users\su-ko\Downloads\brutal_engine\brutal\playground\src\editor\Panels\Panel_console.cpp || cmake_object_order_depends_target_playground
+  DEFINES = -DBRUTAL_ENABLE_PROFILER=1
+  FLAGS = /DWIN32 /D_WINDOWS /EHsc /Zi /Ob0 /Od /RTC1 -MDd
+  INCLUDES = -IC:\Users\su-ko\Downloads\brutal_engine\brutal\playground\src -IC:\Users\su-ko\Downloads\brutal_engine\brutal\playground -IC:\Users\su-ko\Downloads\brutal_engine\brutal\engine\public -IC:\Users\su-ko\Downloads\brutal_engine\brutal\third_party\glad\include -IC:\Users\su-ko\Downloads\brutal_engine\brutal\third_party\imgui -IC:\Users\su-ko\Downloads\brutal_engine\brutal\third_party\imgui\backends -IC:\Users\su-ko\Downloads\brutal_engine\brutal\third_party\ImGuizmo
+  OBJECT_DIR = playground\CMakeFiles\playground.dir
+  OBJECT_FILE_DIR = playground\CMakeFiles\playground.dir\src\editor\Panels
+  TARGET_COMPILE_PDB = playground\CMakeFiles\playground.dir\
+  TARGET_PDB = playground\playground.pdb
+
+build playground\CMakeFiles\playground.dir\src\editor\Panels\Panel_content.cpp.obj: CXX_COMPILER__playground_unscanned_Debug C$:\Users\su-ko\Downloads\brutal_engine\brutal\playground\src\editor\Panels\Panel_content.cpp || cmake_object_order_depends_target_playground
+  DEFINES = -DBRUTAL_ENABLE_PROFILER=1
+  FLAGS = /DWIN32 /D_WINDOWS /EHsc /Zi /Ob0 /Od /RTC1 -MDd
+  INCLUDES = -IC:\Users\su-ko\Downloads\brutal_engine\brutal\playground\src -IC:\Users\su-ko\Downloads\brutal_engine\brutal\playground -IC:\Users\su-ko\Downloads\brutal_engine\brutal\engine\public -IC:\Users\su-ko\Downloads\brutal_engine\brutal\third_party\glad\include -IC:\Users\su-ko\Downloads\brutal_engine\brutal\third_party\imgui -IC:\Users\su-ko\Downloads\brutal_engine\brutal\third_party\imgui\backends -IC:\Users\su-ko\Downloads\brutal_engine\brutal\third_party\ImGuizmo
+  OBJECT_DIR = playground\CMakeFiles\playground.dir
+  OBJECT_FILE_DIR = playground\CMakeFiles\playground.dir\src\editor\Panels
+  TARGET_COMPILE_PDB = playground\CMakeFiles\playground.dir\
+  TARGET_PDB = playground\playground.pdb
+
+build playground\CMakeFiles\playground.dir\src\editor\Panels\Panel_hierarchy.cpp.obj: CXX_COMPILER__playground_unscanned_Debug C$:\Users\su-ko\Downloads\brutal_engine\brutal\playground\src\editor\Panels\Panel_hierarchy.cpp || cmake_object_order_depends_target_playground
+  DEFINES = -DBRUTAL_ENABLE_PROFILER=1
+  FLAGS = /DWIN32 /D_WINDOWS /EHsc /Zi /Ob0 /Od /RTC1 -MDd
+  INCLUDES = -IC:\Users\su-ko\Downloads\brutal_engine\brutal\playground\src -IC:\Users\su-ko\Downloads\brutal_engine\brutal\playground -IC:\Users\su-ko\Downloads\brutal_engine\brutal\engine\public -IC:\Users\su-ko\Downloads\brutal_engine\brutal\third_party\glad\include -IC:\Users\su-ko\Downloads\brutal_engine\brutal\third_party\imgui -IC:\Users\su-ko\Downloads\brutal_engine\brutal\third_party\imgui\backends -IC:\Users\su-ko\Downloads\brutal_engine\brutal\third_party\ImGuizmo
+  OBJECT_DIR = playground\CMakeFiles\playground.dir
+  OBJECT_FILE_DIR = playground\CMakeFiles\playground.dir\src\editor\Panels
+  TARGET_COMPILE_PDB = playground\CMakeFiles\playground.dir\
+  TARGET_PDB = playground\playground.pdb
+
+build playground\CMakeFiles\playground.dir\src\editor\Panels\Panel_inspector.cpp.obj: CXX_COMPILER__playground_unscanned_Debug C$:\Users\su-ko\Downloads\brutal_engine\brutal\playground\src\editor\Panels\Panel_inspector.cpp || cmake_object_order_depends_target_playground
+  DEFINES = -DBRUTAL_ENABLE_PROFILER=1
+  FLAGS = /DWIN32 /D_WINDOWS /EHsc /Zi /Ob0 /Od /RTC1 -MDd
+  INCLUDES = -IC:\Users\su-ko\Downloads\brutal_engine\brutal\playground\src -IC:\Users\su-ko\Downloads\brutal_engine\brutal\playground -IC:\Users\su-ko\Downloads\brutal_engine\brutal\engine\public -IC:\Users\su-ko\Downloads\brutal_engine\brutal\third_party\glad\include -IC:\Users\su-ko\Downloads\brutal_engine\brutal\third_party\imgui -IC:\Users\su-ko\Downloads\brutal_engine\brutal\third_party\imgui\backends -IC:\Users\su-ko\Downloads\brutal_engine\brutal\third_party\ImGuizmo
+  OBJECT_DIR = playground\CMakeFiles\playground.dir
+  OBJECT_FILE_DIR = playground\CMakeFiles\playground.dir\src\editor\Panels
   TARGET_COMPILE_PDB = playground\CMakeFiles\playground.dir\
   TARGET_PDB = playground\playground.pdb
 
@@ -438,10 +614,10 @@ build playground\CMakeFiles\playground.dir\src\editor.cpp.obj: CXX_COMPILER__pla
 #############################################
 # Link the executable playground\playground.exe
 
-build playground\playground.exe: CXX_EXECUTABLE_LINKER__playground_Debug playground\CMakeFiles\playground.dir\src\main.cpp.obj playground\CMakeFiles\playground.dir\src\debug_system.cpp.obj playground\CMakeFiles\playground.dir\src\editor.cpp.obj | engine\brutal_engine.lib third_party\glad\glad.lib || engine\brutal_engine.lib third_party\glad\glad.lib
+build playground\playground.exe: CXX_EXECUTABLE_LINKER__playground_Debug playground\CMakeFiles\playground.dir\src\main.cpp.obj playground\CMakeFiles\playground.dir\src\debug_system.cpp.obj playground\CMakeFiles\playground.dir\src\editor\Editor.cpp.obj playground\CMakeFiles\playground.dir\src\editor\Editor_camera.cpp.obj playground\CMakeFiles\playground.dir\src\editor\Editor_cursor.cpp.obj playground\CMakeFiles\playground.dir\src\editor\Editor_dockspace.cpp.obj playground\CMakeFiles\playground.dir\src\editor\Editor_gizmo.cpp.obj playground\CMakeFiles\playground.dir\src\editor\Editor_input.cpp.obj playground\CMakeFiles\playground.dir\src\editor\Editor_viewport.cpp.obj playground\CMakeFiles\playground.dir\src\editor\Panels\Panel_console.cpp.obj playground\CMakeFiles\playground.dir\src\editor\Panels\Panel_content.cpp.obj playground\CMakeFiles\playground.dir\src\editor\Panels\Panel_hierarchy.cpp.obj playground\CMakeFiles\playground.dir\src\editor\Panels\Panel_inspector.cpp.obj | engine\brutal_engine.lib third_party\imgui.lib third_party\imguizmo.lib third_party\glad\glad.lib || engine\brutal_engine.lib third_party\glad\glad.lib third_party\imgui.lib third_party\imguizmo.lib
   FLAGS = /DWIN32 /D_WINDOWS /EHsc /Zi /Ob0 /Od /RTC1 -MDd
   LINK_FLAGS = /machine:x64 /debug /INCREMENTAL /subsystem:console  /SUBSYSTEM:CONSOLE
-  LINK_LIBRARIES = engine\brutal_engine.lib  third_party\glad\glad.lib  user32.lib  gdi32.lib  opengl32.lib  winmm.lib  kernel32.lib user32.lib gdi32.lib winspool.lib shell32.lib ole32.lib oleaut32.lib uuid.lib comdlg32.lib advapi32.lib
+  LINK_LIBRARIES = engine\brutal_engine.lib  third_party\imgui.lib  third_party\imguizmo.lib  third_party\glad\glad.lib  user32.lib  gdi32.lib  opengl32.lib  winmm.lib  kernel32.lib user32.lib gdi32.lib winspool.lib shell32.lib ole32.lib oleaut32.lib uuid.lib comdlg32.lib advapi32.lib
   OBJECT_DIR = playground\CMakeFiles\playground.dir
   POST_BUILD = cd .
   PRE_LINK = cd .
@@ -484,6 +660,14 @@ build glad: phony third_party\glad\glad.lib
 
 build glad.lib: phony third_party\glad\glad.lib
 
+build imgui: phony third_party\imgui.lib
+
+build imgui.lib: phony third_party\imgui.lib
+
+build imguizmo: phony third_party\imguizmo.lib
+
+build imguizmo.lib: phony third_party\imguizmo.lib
+
 build playground: phony playground\playground.exe
 
 build playground.exe: phony playground\playground.exe
@@ -517,7 +701,7 @@ build playground\all: phony playground\playground.exe
 #############################################
 # Folder: C:/Users/su-ko/Downloads/brutal_engine/brutal/out/build/x64-Debug/third_party
 
-build third_party\all: phony third_party\glad\all
+build third_party\all: phony third_party\imgui.lib third_party\imguizmo.lib third_party\glad\all
 
 # =============================================================================
 

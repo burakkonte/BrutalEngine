@@ -15,6 +15,15 @@
 ########################
 
 //Value Computed by CMake
+BrutalEngineRoot_BINARY_DIR:STATIC=C:/Users/su-ko/Downloads/brutal_engine/brutal/out/build/x64-Debug
+
+//Value Computed by CMake
+BrutalEngineRoot_IS_TOP_LEVEL:STATIC=ON
+
+//Value Computed by CMake
+BrutalEngineRoot_SOURCE_DIR:STATIC=C:/Users/su-ko/Downloads/brutal_engine/brutal
+
+//Value Computed by CMake
 BrutalEngine_BINARY_DIR:STATIC=C:/Users/su-ko/Downloads/brutal_engine/brutal/out/build/x64-Debug
 
 //Value Computed by CMake

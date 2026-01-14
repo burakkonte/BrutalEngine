@@ -233,7 +233,7 @@ int main() {
     debug_system_init(&debug_system);
 
     EditorContext editor = {};
-    editor_init(&editor);
+    editor_init(&editor, &platform);
     
     // Main loop
     while (!platform.should_quit) {
