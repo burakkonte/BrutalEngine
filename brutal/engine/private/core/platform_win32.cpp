@@ -163,6 +163,7 @@ namespace brutal {
             return 0;
         case WM_KILLFOCUS:
             g_platform->input_focused = false;
+            platform_set_mouse_capture(g_platform, false);
             platform_disable_mouse_look(g_platform);
             platform_clear_mouse_delta(g_platform);
             return 0;
