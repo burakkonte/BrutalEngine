@@ -12,6 +12,7 @@
 #include "editor/Panels/Panel_inspector.h"
 
 #include <ImGuizmo.h>
+#include <glad/glad.h>
 #include <imgui.h>
 #include <imgui_impl_opengl3.h>
 #include <imgui_impl_win32.h>
@@ -59,6 +60,9 @@ namespace brutal {
         ctx->gizmo.operation = 0;
         ctx->gizmo.mode = 0;
         ctx->gizmo.using_gizmo = false;
+
+        ctx->debug_force_clear = true;
+        ctx->debug_show_test_window = true;
     }
 
     void editor_shutdown(EditorContext* ctx) {
@@ -83,6 +87,8 @@ namespace brutal {
 
     void editor_begin_frame(EditorContext* ctx, PlatformState* platform) {
         if (!ctx || !platform || !ctx->active) return;
+        ctx->window_width = platform->window_width;
+        ctx->window_height = platform->window_height;
         ImGui_ImplOpenGL3_NewFrame();
         ImGui_ImplWin32_NewFrame();
         ImGui::NewFrame();
@@ -109,6 +115,13 @@ namespace brutal {
         editor_draw_viewport(ctx, scene);
 
         editor_dockspace_end();
+
+        if (ctx->debug_show_test_window) {
+            ImGui::Begin("EDITOR TEST", &ctx->debug_show_test_window);
+            ImGui::TextUnformatted("EDITOR DRAWING");
+            ImGui::Checkbox("Force backbuffer clear", &ctx->debug_force_clear);
+            ImGui::End();
+        }
     }
 
     void editor_render_scene(EditorContext* ctx, Scene* scene, RendererState* renderer) {
@@ -116,9 +129,22 @@ namespace brutal {
         editor_viewport_render_scene(ctx, scene, renderer);
     }
 
-    void editor_end_frame(EditorContext* ctx) {
-        if (!ctx || !ctx->active) return;
+    void editor_end_frame(EditorContext* ctx, const PlatformState* platform) {
+        if (!ctx || !ctx->active || !platform) return;
         ImGui::Render();
+
+        glBindFramebuffer(GL_FRAMEBUFFER, 0);
+        glDrawBuffer(GL_BACK);
+        glReadBuffer(GL_BACK);
+        glViewport(0, 0, platform->window_width, platform->window_height);
+        glDisable(GL_SCISSOR_TEST);
+        glDisable(GL_DEPTH_TEST);
+        glDisable(GL_CULL_FACE);
+        if (ctx->debug_force_clear) {
+            glClearColor(1.0f, 0.0f, 0.0f, 1.0f);
+            glClear(GL_COLOR_BUFFER_BIT);
+        }
+
         ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 
         ImGuiIO& io = ImGui::GetIO();

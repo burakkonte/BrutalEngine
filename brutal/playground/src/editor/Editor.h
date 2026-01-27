@@ -51,6 +51,10 @@ namespace brutal {
         bool dockspace_built;
         bool wants_capture_mouse;
         bool wants_capture_keyboard;
+        i32 window_width;
+        i32 window_height;
+        bool debug_force_clear;
+        bool debug_show_test_window;
 
         EditorViewportState viewport;
         EditorFramebuffer scene_buffer;
@@ -85,7 +89,7 @@ namespace brutal {
     void editor_update(EditorContext* ctx, Scene* scene, PlatformState* platform, f32 dt);
     void editor_build_ui(EditorContext* ctx, Scene* scene, PlatformState* platform);
     void editor_render_scene(EditorContext* ctx, Scene* scene, RendererState* renderer);
-    void editor_end_frame(EditorContext* ctx);
+    void editor_end_frame(EditorContext* ctx, const PlatformState* platform);
 
     bool editor_scene_needs_rebuild(const EditorContext* ctx);
     void editor_clear_rebuild_flag(EditorContext* ctx);

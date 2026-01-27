@@ -375,7 +375,7 @@ int main() {
         profiler_end_frame();
 
         if (editor.active) {
-            editor_end_frame(&editor);
+            editor_end_frame(&editor, &platform);
         }
         
         renderer_end_frame();
