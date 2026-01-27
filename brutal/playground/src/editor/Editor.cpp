@@ -134,8 +134,7 @@ namespace brutal {
         ImGui::Render();
 
         glBindFramebuffer(GL_FRAMEBUFFER, 0);
-        glDrawBuffer(GL_BACK);
-        glReadBuffer(GL_BACK);
+        
         glViewport(0, 0, platform->window_width, platform->window_height);
         glDisable(GL_SCISSOR_TEST);
         glDisable(GL_DEPTH_TEST);
