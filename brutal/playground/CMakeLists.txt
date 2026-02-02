@@ -2,7 +2,9 @@ cmake_minimum_required(VERSION 3.20)
 
 add_executable(playground
     src/main.cpp
+    src/debug_camera.cpp
     src/debug_system.cpp
+    src/engine_mode.cpp
     src/editor/Editor.cpp
     src/editor/Editor_camera.cpp
     src/editor/Editor_cursor.cpp

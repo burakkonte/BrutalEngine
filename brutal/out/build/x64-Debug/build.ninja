@@ -507,7 +507,25 @@ build playground\CMakeFiles\playground.dir\src\main.cpp.obj: CXX_COMPILER__playg
   TARGET_COMPILE_PDB = playground\CMakeFiles\playground.dir\
   TARGET_PDB = playground\playground.pdb
 
+build playground\CMakeFiles\playground.dir\src\debug_camera.cpp.obj: CXX_COMPILER__playground_unscanned_Debug C$:\Users\su-ko\Downloads\brutal_engine\brutal\playground\src\debug_camera.cpp || cmake_object_order_depends_target_playground
+  DEFINES = -DBRUTAL_ENABLE_PROFILER=1
+  FLAGS = /DWIN32 /D_WINDOWS /EHsc /Zi /Ob0 /Od /RTC1 -MDd
+  INCLUDES = -IC:\Users\su-ko\Downloads\brutal_engine\brutal\playground\src -IC:\Users\su-ko\Downloads\brutal_engine\brutal\playground -IC:\Users\su-ko\Downloads\brutal_engine\brutal\engine\public -IC:\Users\su-ko\Downloads\brutal_engine\brutal\third_party\glad\include -IC:\Users\su-ko\Downloads\brutal_engine\brutal\third_party\imgui -IC:\Users\su-ko\Downloads\brutal_engine\brutal\third_party\imgui\backends -IC:\Users\su-ko\Downloads\brutal_engine\brutal\third_party\ImGuizmo
+  OBJECT_DIR = playground\CMakeFiles\playground.dir
+  OBJECT_FILE_DIR = playground\CMakeFiles\playground.dir\src
+  TARGET_COMPILE_PDB = playground\CMakeFiles\playground.dir\
+  TARGET_PDB = playground\playground.pdb
+
 build playground\CMakeFiles\playground.dir\src\debug_system.cpp.obj: CXX_COMPILER__playground_unscanned_Debug C$:\Users\su-ko\Downloads\brutal_engine\brutal\playground\src\debug_system.cpp || cmake_object_order_depends_target_playground
+  DEFINES = -DBRUTAL_ENABLE_PROFILER=1
+  FLAGS = /DWIN32 /D_WINDOWS /EHsc /Zi /Ob0 /Od /RTC1 -MDd
+  INCLUDES = -IC:\Users\su-ko\Downloads\brutal_engine\brutal\playground\src -IC:\Users\su-ko\Downloads\brutal_engine\brutal\playground -IC:\Users\su-ko\Downloads\brutal_engine\brutal\engine\public -IC:\Users\su-ko\Downloads\brutal_engine\brutal\third_party\glad\include -IC:\Users\su-ko\Downloads\brutal_engine\brutal\third_party\imgui -IC:\Users\su-ko\Downloads\brutal_engine\brutal\third_party\imgui\backends -IC:\Users\su-ko\Downloads\brutal_engine\brutal\third_party\ImGuizmo
+  OBJECT_DIR = playground\CMakeFiles\playground.dir
+  OBJECT_FILE_DIR = playground\CMakeFiles\playground.dir\src
+  TARGET_COMPILE_PDB = playground\CMakeFiles\playground.dir\
+  TARGET_PDB = playground\playground.pdb
+
+build playground\CMakeFiles\playground.dir\src\engine_mode.cpp.obj: CXX_COMPILER__playground_unscanned_Debug C$:\Users\su-ko\Downloads\brutal_engine\brutal\playground\src\engine_mode.cpp || cmake_object_order_depends_target_playground
   DEFINES = -DBRUTAL_ENABLE_PROFILER=1
   FLAGS = /DWIN32 /D_WINDOWS /EHsc /Zi /Ob0 /Od /RTC1 -MDd
   INCLUDES = -IC:\Users\su-ko\Downloads\brutal_engine\brutal\playground\src -IC:\Users\su-ko\Downloads\brutal_engine\brutal\playground -IC:\Users\su-ko\Downloads\brutal_engine\brutal\engine\public -IC:\Users\su-ko\Downloads\brutal_engine\brutal\third_party\glad\include -IC:\Users\su-ko\Downloads\brutal_engine\brutal\third_party\imgui -IC:\Users\su-ko\Downloads\brutal_engine\brutal\third_party\imgui\backends -IC:\Users\su-ko\Downloads\brutal_engine\brutal\third_party\ImGuizmo
@@ -623,7 +641,7 @@ build playground\CMakeFiles\playground.dir\src\editor\Panels\Panel_inspector.cpp
 #############################################
 # Link the executable playground\playground.exe
 
-build playground\playground.exe: CXX_EXECUTABLE_LINKER__playground_Debug playground\CMakeFiles\playground.dir\src\main.cpp.obj playground\CMakeFiles\playground.dir\src\debug_system.cpp.obj playground\CMakeFiles\playground.dir\src\editor\Editor.cpp.obj playground\CMakeFiles\playground.dir\src\editor\Editor_camera.cpp.obj playground\CMakeFiles\playground.dir\src\editor\Editor_cursor.cpp.obj playground\CMakeFiles\playground.dir\src\editor\Editor_dockspace.cpp.obj playground\CMakeFiles\playground.dir\src\editor\Editor_gizmo.cpp.obj playground\CMakeFiles\playground.dir\src\editor\Editor_input.cpp.obj playground\CMakeFiles\playground.dir\src\editor\Editor_viewport.cpp.obj playground\CMakeFiles\playground.dir\src\editor\Panels\Panel_console.cpp.obj playground\CMakeFiles\playground.dir\src\editor\Panels\Panel_content.cpp.obj playground\CMakeFiles\playground.dir\src\editor\Panels\Panel_hierarchy.cpp.obj playground\CMakeFiles\playground.dir\src\editor\Panels\Panel_inspector.cpp.obj | engine\brutal_engine.lib third_party\imgui.lib third_party\imguizmo.lib third_party\glad\glad.lib || engine\brutal_engine.lib third_party\glad\glad.lib third_party\imgui.lib third_party\imguizmo.lib
+build playground\playground.exe: CXX_EXECUTABLE_LINKER__playground_Debug playground\CMakeFiles\playground.dir\src\main.cpp.obj playground\CMakeFiles\playground.dir\src\debug_camera.cpp.obj playground\CMakeFiles\playground.dir\src\debug_system.cpp.obj playground\CMakeFiles\playground.dir\src\engine_mode.cpp.obj playground\CMakeFiles\playground.dir\src\editor\Editor.cpp.obj playground\CMakeFiles\playground.dir\src\editor\Editor_camera.cpp.obj playground\CMakeFiles\playground.dir\src\editor\Editor_cursor.cpp.obj playground\CMakeFiles\playground.dir\src\editor\Editor_dockspace.cpp.obj playground\CMakeFiles\playground.dir\src\editor\Editor_gizmo.cpp.obj playground\CMakeFiles\playground.dir\src\editor\Editor_input.cpp.obj playground\CMakeFiles\playground.dir\src\editor\Editor_viewport.cpp.obj playground\CMakeFiles\playground.dir\src\editor\Panels\Panel_console.cpp.obj playground\CMakeFiles\playground.dir\src\editor\Panels\Panel_content.cpp.obj playground\CMakeFiles\playground.dir\src\editor\Panels\Panel_hierarchy.cpp.obj playground\CMakeFiles\playground.dir\src\editor\Panels\Panel_inspector.cpp.obj | engine\brutal_engine.lib third_party\imgui.lib third_party\imguizmo.lib third_party\glad\glad.lib || engine\brutal_engine.lib third_party\glad\glad.lib third_party\imgui.lib third_party\imguizmo.lib
   FLAGS = /DWIN32 /D_WINDOWS /EHsc /Zi /Ob0 /Od /RTC1 -MDd
   LINK_FLAGS = /machine:x64 /debug /INCREMENTAL /subsystem:console  /SUBSYSTEM:CONSOLE
   LINK_LIBRARIES = engine\brutal_engine.lib  third_party\imgui.lib  third_party\imguizmo.lib  third_party\glad\glad.lib  user32.lib  gdi32.lib  opengl32.lib  winmm.lib  kernel32.lib user32.lib gdi32.lib winspool.lib shell32.lib ole32.lib oleaut32.lib uuid.lib comdlg32.lib advapi32.lib
