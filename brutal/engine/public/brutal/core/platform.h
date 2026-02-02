@@ -47,6 +47,8 @@ struct KeyState {
 struct InputState {
     KeyState keys;
     MouseState mouse;
+    bool keyboard_consumed;
+    bool mouse_consumed;
 };
 
 struct MouseDelta {
@@ -133,6 +135,27 @@ inline bool platform_key_pressed(const InputState* input, i32 key) {
 inline bool platform_key_released(const InputState* input, i32 key) {
     i32 k = key & 0xFF;
     return input->keys.released[k];
+}
+
+inline void platform_input_consume_keyboard(InputState* input) {
+    if (!input) return;
+    input->keyboard_consumed = true;
+    for (int i = 0; i < 256; ++i) {
+        input->keys.down[i] = false;
+        input->keys.pressed[i] = false;
+        input->keys.released[i] = false;
+    }
+}
+
+inline void platform_input_consume_mouse(InputState* input) {
+    if (!input) return;
+    input->mouse_consumed = true;
+    input->mouse.left.pressed = input->mouse.left.released = false;
+    input->mouse.right.pressed = input->mouse.right.released = false;
+    input->mouse.middle.pressed = input->mouse.middle.released = false;
+    input->mouse.delta_x = input->mouse.delta_y = 0;
+    input->mouse.raw_dx = input->mouse.raw_dy = 0;
+    input->mouse.wheel_delta = 0;
 }
 
 }

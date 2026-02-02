@@ -266,6 +266,8 @@ namespace brutal {
     }
 
     void platform_poll_events(PlatformState* state) {
+        state->input.keyboard_consumed = false;
+        state->input.mouse_consumed = false;
         memcpy(state->input.keys.down_previous, state->input.keys.down,
             sizeof(state->input.keys.down_previous));
 
