@@ -25,11 +25,11 @@
 151	658	7901592228650428	engine/CMakeFiles/brutal_engine.dir/private/renderer/debug_draw.cpp.obj	fc2c1238cd2f091
 134	832	7900656980956423	engine/CMakeFiles/brutal_engine.dir/private/renderer/light.cpp.obj	b88534202d571af
 874	1511	7900656988358772	engine/CMakeFiles/brutal_engine.dir/private/world/player.cpp.obj	588df1e6a4cdc84d
-101	858	7912584331172343	playground/CMakeFiles/playground.dir/src/main.cpp.obj	a7d3172bf4e1286b
+60	286	7912586421945677	playground/CMakeFiles/playground.dir/src/main.cpp.obj	a7d3172bf4e1286b
 45	935	7900656980068097	third_party/CMakeFiles/imguizmo.dir/ImGuizmo/ImGuizmo.cpp.obj	16179ebe4cfd963c
 798	892	7901592235126043	engine/brutal_engine.lib	4daa13bcbeba46c1
-47	441	7901641992829453	playground/CMakeFiles/playground.dir/src/editor/Editor.cpp.obj	b8f102d5a7136352
-442	593	7901641996777594	playground/playground.exe	2ae2d6214de8efcf
+154	1271	7917632651709047	playground/CMakeFiles/playground.dir/src/editor/Editor.cpp.obj	b8f102d5a7136352
+1272	1513	7917632662890053	playground/playground.exe	2ae2d6214de8efcf
 935	1387	7900656988968513	third_party/imguizmo.lib	82c09d0c509a0af3
 1001	1367	7900656989626158	playground/CMakeFiles/playground.dir/src/debug_system.cpp.obj	c513d1398e892723
 163	801	7912584331785429	playground/CMakeFiles/playground.dir/src/editor/Panels/Panel_content.cpp.obj	87db2f9e3d7397d8
@@ -43,12 +43,3 @@
 137	814	7912584331529370	playground/CMakeFiles/playground.dir/src/editor/Editor_input.cpp.obj	f11205c68ea45897
 154	821	7912584331695116	playground/CMakeFiles/playground.dir/src/editor/Panels/Panel_console.cpp.obj	805966f750a3ddbe
 176	828	7912584331915791	playground/CMakeFiles/playground.dir/src/editor/Panels/Panel_inspector.cpp.obj	42f4b0da54bbee1e
-60	286	7912586421945677	playground/CMakeFiles/playground.dir/src/main.cpp.obj	a7d3172bf4e1286b
-71	568	7912586422060946	playground/CMakeFiles/playground.dir/src/editor/Editor.cpp.obj	b8f102d5a7136352
-568	974	7912586427034868	playground/playground.exe	2ae2d6214de8efcf
-12	482	7912587581543690	playground/CMakeFiles/playground.dir/src/editor/Editor.cpp.obj	b8f102d5a7136352
-482	721	7912587586251290	playground/playground.exe	2ae2d6214de8efcf
-116	922	7913299859951874	playground/CMakeFiles/playground.dir/src/editor/Editor.cpp.obj	b8f102d5a7136352
-923	1156	7913299868016927	playground/playground.exe	2ae2d6214de8efcf
-154	1271	7917632651709047	playground/CMakeFiles/playground.dir/src/editor/Editor.cpp.obj	b8f102d5a7136352
-1272	1513	7917632662890053	playground/playground.exe	2ae2d6214de8efcf
