@@ -43,3 +43,6 @@
 137	814	7912584331529370	playground/CMakeFiles/playground.dir/src/editor/Editor_input.cpp.obj	f11205c68ea45897
 154	821	7912584331695116	playground/CMakeFiles/playground.dir/src/editor/Panels/Panel_console.cpp.obj	805966f750a3ddbe
 176	828	7912584331915791	playground/CMakeFiles/playground.dir/src/editor/Panels/Panel_inspector.cpp.obj	42f4b0da54bbee1e
+14	154	7917748313954165	engine/CMakeFiles/brutal_engine.dir/private/world/scene_io.cpp.obj	8c311f3932fdcb4d
+26	163	7917748314078798	playground/CMakeFiles/playground.dir/src/debug_system.cpp.obj	c513d1398e892723
+155	241	7917748315365717	engine/brutal_engine.lib	23a56f973264ffa2

@@ -108,14 +108,14 @@ namespace brutal {
     }
 
     void debug_system_update(DebugSystem* system, const InputState* input) {
-        if (platform_key_pressed_raw(input, KEY_F1)) system->show_main = !system->show_main;
-        if (platform_key_pressed_raw(input, KEY_F2)) system->show_perf = !system->show_perf;
-        if (platform_key_pressed_raw(input, KEY_F3)) system->show_render = !system->show_render;
-        if (platform_key_pressed_raw(input, KEY_F4)) system->show_collision = !system->show_collision;
-        if (platform_key_pressed_raw(input, KEY_F5)) system->show_lights = !system->show_lights;
-        if (platform_key_pressed_raw(input, KEY_F6)) system->show_player_bounds = !system->show_player_bounds;
-        if (platform_key_pressed_raw(input, KEY_F7)) system->reload_requested = true;
-        if (platform_key_pressed_raw(input, KEY_GRAVE)) system->show_console = !system->show_console;
+        if (platform_key_pressed(input, KEY_F1)) system->show_main = !system->show_main;
+        if (platform_key_pressed(input, KEY_F2)) system->show_perf = !system->show_perf;
+        if (platform_key_pressed(input, KEY_F3)) system->show_render = !system->show_render;
+        if (platform_key_pressed(input, KEY_F4)) system->show_collision = !system->show_collision;
+        if (platform_key_pressed(input, KEY_F5)) system->show_lights = !system->show_lights;
+        if (platform_key_pressed(input, KEY_F6)) system->show_player_bounds = !system->show_player_bounds;
+        if (platform_key_pressed(input, KEY_F7)) system->reload_requested = true;
+        if (platform_key_pressed(input, KEY_GRAVE)) system->show_console = !system->show_console;
     }
 
     bool debug_system_show_collision(const DebugSystem* system) {
@@ -183,12 +183,12 @@ namespace brutal {
             draw_line(y, white, "WishDir: (%.2f, %.2f, %.2f)",
                 player->wish_dir.x, player->wish_dir.y, player->wish_dir.z);
             if (input) {
-                bool w = platform_key_down_raw(input, KEY_W);
-                bool a = platform_key_down_raw(input, KEY_A);
-                bool s = platform_key_down_raw(input, KEY_S);
-                bool d = platform_key_down_raw(input, KEY_D);
-                bool jump = platform_key_pressed_raw(input, KEY_SPACE);
-                bool crouch = platform_key_down_raw(input, KEY_LCONTROL) || platform_key_down_raw(input, KEY_CONTROL);
+                bool w = platform_key_down(input, KEY_W);
+                bool a = platform_key_down(input, KEY_A);
+                bool s = platform_key_down(input, KEY_S);
+                bool d = platform_key_down(input, KEY_D);
+                bool jump = platform_key_pressed(input, KEY_SPACE);
+                bool crouch = platform_key_down(input, KEY_LCONTROL) || platform_key_down(input, KEY_CONTROL);
                 draw_line(y, white, "Input W:%d A:%d S:%d D:%d Jump:%d Crouch:%d",
                     w ? 1 : 0, a ? 1 : 0, s ? 1 : 0, d ? 1 : 0,
                     jump ? 1 : 0, crouch ? 1 : 0);
