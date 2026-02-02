@@ -10,6 +10,7 @@ namespace brutal {
     struct PlatformState;
     struct Player;
     struct RendererState;
+    struct Scene;
 
     struct DebugFrameInfo {
         f32 delta_time;
@@ -22,6 +23,8 @@ namespace brutal {
         bool show_perf;
         bool show_render;
         bool show_collision;
+        bool show_lights;
+        bool show_player_bounds;
         bool show_console;
         bool reload_requested;
     };
@@ -34,10 +37,12 @@ namespace brutal {
         const PlatformState* platform,
         const Player* player,
         const RendererState* renderer,
+        const Scene* scene,
         const CollisionWorld* collision,
         i32 screen_w,
         i32 screen_h);
     bool debug_system_show_collision(const DebugSystem* system);
+    bool debug_system_has_world_lines(const DebugSystem* system);
     bool debug_system_consume_reload(DebugSystem* system);
 
 }

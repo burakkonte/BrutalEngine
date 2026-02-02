@@ -16,6 +16,7 @@ set(ENGINE_SOURCES
     private/world/entity.cpp
     private/world/collision.cpp
     private/world/scene.cpp
+    private/world/scene_io.cpp
     private/world/player.cpp
     private/engine.cpp
 )

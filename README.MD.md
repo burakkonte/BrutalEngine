@@ -8,6 +8,17 @@ Brutal Engine is a C++ game engine and playable prototype built for the **Gothic
 **Non-goals (current)**
 - Not a general-purpose engine; scope is intentionally limited to the demo’s needs.
 
+## Engine Architecture (Core Concepts)
+Brutal Engine is structured around explicit, mode-driven systems so editor logic and gameplay never overlap:
+
+- **Engine modes**:
+  - **Editor**: ImGui-based tools, editor camera, gizmos, scene inspection.
+  - **Play**: Gameplay logic, player controller, flashlight, and player camera.
+  - **Debug FreeCam**: No gameplay logic, free camera for inspection and debug visualization.
+- **Input routing**: Input is captured once per frame, with explicit `Pressed / Held / Released` states. UI can consume keyboard/mouse input so gameplay never sees it.
+- **Camera ownership** is unambiguous: each mode owns its camera and the renderer uses the active camera only.
+- **Scene data separation**: World data lives in `playground/data/*.scene.json`, while engine systems load and interpret it.
+
 ## Key Features (Implemented)
 ### Core systems
 - Memory arena allocator, logging, and scoped profiling support with per-frame timing.
@@ -15,7 +26,9 @@ Brutal Engine is a C++ game engine and playable prototype built for the **Gothic
 
 ### Platform & input
 - Win32 window creation and OpenGL context setup.
-- Keyboard/mouse input state tracking with raw mouse deltas and mouse-look telemetry.
+- Engine-grade input system with explicit **Pressed / Held / Released** state tracking.
+- UI input consumption so editor/ImGui can block gameplay input when needed.
+- Raw mouse delta tracking and mouse-look telemetry for debugging.
 - Mouse capture/lock support for FPS input.
 
 ### Rendering
@@ -27,6 +40,7 @@ Brutal Engine is a C++ game engine and playable prototype built for the **Gothic
 ### World/scene
 - Brush-based world geometry with rebuildable world mesh.
 - Prop entities (currently rendered as cubes) and point light entities.
+- **Scene serialization** with JSON-based world data (`playground/data/gothic_house.scene.json`).
 - Collision world built from brush AABBs.
 
 ### Gameplay
@@ -42,11 +56,10 @@ Brutal Engine is a C++ game engine and playable prototype built for the **Gothic
 - Editor camera free-fly controls and optional grid rendering.
 
 ### Debugging
-- Debug overlays for FPS/timing, renderer stats, and collision visualization.
+- Toggleable debug layers for FPS/timing, renderer stats, collision volumes, lights, and player bounds.
 - Profiler HUD for frame timing breakdown (enabled in non-Release builds).
 
 ## Planned / Roadmap
-- **Scene serialization** (save/load) for brushes, props, and lights.
 - **Undo/redo** stack for editor actions.
 - **Editor selection in viewport** (ray picking) to complement the hierarchy list.
 - **Console command input** (current console panel is a placeholder).
@@ -68,3 +81,7 @@ cd brutal
 
 cmake -S . -B build -G "Visual Studio 17 2022"
 cmake --build build --config Release
+```
+
+### Scene Data
+- The demo scene is loaded from `playground/data/gothic_house.scene.json`. Edit this file to adjust brushes, lights, and spawn data without recompiling.
